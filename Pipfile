@@ -1,0 +1,22 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pylint = "*"
+autopep8 = "*"
+
+[packages]
+numpy = "*"
+pandas = "*"
+matplotlib = "*"
+sklearn = "*"
+tqdm = "*"
+networkx = "*"
+# tensorflow = "*" -> pipenv has pb installing ts on aws instances
+xgboost = "*"
+tensorflow = "*"
+
+[requires]
+python_version = "3.8"
