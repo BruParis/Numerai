@@ -17,7 +17,7 @@ from k_nn_model import K_NNModel
 
 
 TOURNAMENT_NAME = "kazutsugi"
-PREDICTION_NAME = f"prediction_{TOURNAMENT_NAME}"
+PREDICTION_NAME = "prediction_" + TOURNAMENT_NAME
 COL_PRED = ['id', PREDICTION_NAME]
 COL_PROBA_NAMES = ['proba_0.0', 'proba_0.25',
                    'proba_0.5', 'proba_0.75', 'proba_1.0']

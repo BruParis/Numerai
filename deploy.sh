@@ -6,7 +6,8 @@ NUM_ARG=$#
 
 LOCAL_KEY_AWS=~/.ssh/$2
 
-SCRIPT_AWS=deploy_aws.sh
+SCRIPT_AWS_DEPLOY=aws_deploy.sh
+SCRIPT_AWS_EXECUTE=aws_execute.sh
 AWS_FOLDER=Numerai
 
 print_usage() {
@@ -32,12 +33,20 @@ else
     ssh -i $LOCAL_KEY_AWS ec2-user@$ADDR 'mkdir' $AWS_FOLDER
 
     cat aws_upload_files.txt | xargs -i{} scp -i $LOCAL_KEY_AWS {} ec2-user@$ADDR:~/$AWS_FOLDER
-    scp -i $LOCAL_KEY_AWS 'deploy_aws.sh' ec2-user@$ADDR:~/
+    
+    scp -i $LOCAL_KEY_AWS $SCRIPT_AWS_DEPLOY ec2-user@$ADDR:~/
+    scp -i $LOCAL_KEY_AWS $SCRIPT_AWS_EXECUTE ec2-user@$ADDR:~/
 
     ssh -i $LOCAL_KEY_AWS ec2-user@$ADDR "
-        sudo chmod +x '$SCRIPT_AWS';
-        sudo ./deploy_aws.sh
-    "
+        sudo chmod +x '$SCRIPT_AWS_DEPLOY';
+        sudo ./'$SCRIPT_AWS_DEPLOY'"
+
+    ssh -i $LOCAL_KEY_AWS ec2-user@$ADDR "
+        mv '$SCRIPT_AWS_EXECUTE' Numerai/
+        cd Numerai/
+        sudo chmod +x '$SCRIPT_AWS_EXECUTE';
+        sudo ./'$SCRIPT_AWS_EXECUTE'"
+
     ssh -i $LOCAL_KEY_AWS ec2-user@$ADDR
 
     exit 0

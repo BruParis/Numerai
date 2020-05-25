@@ -11,15 +11,8 @@ rm -f /opt/Python-3.8.2.tgz
 cd /home/ec2-user/Numerai/
 
 yum install python-pip -y
-pip install --user pipenv
 
+sudo -u ec2-user pip install --user pipenv
 pipenv --python 3.8
 pipenv install
-pipenv shell
-pip install --no-cache-dir tensorflow
 
-python feature_era_corr_split.py
-python era_ft_graph.py
-python data_subsets_format.py
-python generate_models.py
-python model_predict_tournament.py
