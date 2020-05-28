@@ -1,4 +1,5 @@
 eras_ft_*.json
 model_config.json
+numerai_training_data_layer.csv
 
 data_subsets_*/
