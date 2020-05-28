@@ -149,7 +149,7 @@ class NeuralNetwork(Model):
             return
 
         if self.debug:
-            print("produce metrics for model params: ", self.model_params)
+            print("model params: ", self.model_params)
 
         train_input, train_target = self._format_input_target(self.train_data)
         packed_train_ds = self._pack_input_target_ds(

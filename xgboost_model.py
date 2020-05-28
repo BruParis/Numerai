@@ -26,7 +26,7 @@ class XGBModel(Model):
             return
 
         if self.debug:
-            print("produce metrics for model params: ", self.model_params)
+            print("model params: ", self.model_params)
 
         # model_param = {'max_depth': 2, 'eta': 1, 'objective': 'binary:logistic'}
         # model_param['eval_metric'] = 'auc'

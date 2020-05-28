@@ -54,7 +54,7 @@ class RFModel(Model):
             return
 
         if self.debug:
-            print("produce metrics for model params: ", self.model_params)
+            print("model params: ", self.model_params)
 
         # check model_params structure coherent ith RandomForest (?)
 

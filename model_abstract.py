@@ -21,44 +21,6 @@ class ModelType(enum.Enum):
 
 class Model(ABC):
 
-    @staticmethod
-    def get_metrics_filename(eModel, model_prefix=None):
-        if eModel == ModelType.RandomForest:
-            return 'random_forest_metrics.csv'
-
-        if eModel == ModelType.XGBoost:
-            return 'xgboost_metrics.csv'
-
-        if eModel == ModelType.NeuralNetwork:
-            return 'neural_net_metrics.csv'
-
-        if eModel == ModelType.K_NN:
-            filename = str(model_prefix) + '_nn_metrics.csv'
-            return filename
-
-    @staticmethod
-    def get_metrics_labels(eModel):
-        if eModel == ModelType.RandomForest:
-            column_metrics = ['n_estimators', 'max_features', 'max_depth',
-                              'min_samples_split', 'min_samples_leaf',
-                              'log_loss', 'accuracy_score']
-            return column_metrics
-
-        if eModel == ModelType.XGBoost:
-            column_metrics = ['n_estimators', 'max_depth', 'learning_rate',
-                              'log_loss', 'accuracy_score']
-            return column_metrics
-
-        if eModel == ModelType.NeuralNetwork:
-            column_metrics = ['num_layer', 'size_factor',
-                              'log_loss', 'accuracy_score']
-            return column_metrics
-
-        if eModel == ModelType.K_NN:
-            column_metrics = ['n_neighbors', 'leaf_size',
-                              'minkowski_dist', 'log_loss', 'accuracy_score']
-            return column_metrics
-
     def _get_model_name(self, model_type, model_params):
         if model_type == ModelType.RandomForest:
             return 'rf'
