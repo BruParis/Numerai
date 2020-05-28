@@ -12,11 +12,11 @@ reader_csv.py
 pool_map.py
 feature_order.py
 
-generate_models.py
+generate_fst_layer_models.py
 model_abstract.py
 random_forest_model.py
 xgboost_model.py
 neural_net_model.py
 k_nn_model.py
 
-model_predict_tournament.py
+model_fst_layer_predict_tournament.py

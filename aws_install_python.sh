@@ -8,11 +8,5 @@ cd Python-3.8.2
 make altinstall
 rm -f /opt/Python-3.8.2.tgz
 
-cd /home/ec2-user/Numerai/
-
-yum install python-pip -y
-
-sudo -u ec2-user pip install --user pipenv
-pipenv --python 3.8
-pipenv install
-
+yum install python3-pip -y
+yum install python3-devel -y

@@ -6,7 +6,8 @@ NUM_ARG=$#
 
 LOCAL_KEY_AWS=~/.ssh/$2
 
-SCRIPT_AWS_DEPLOY=aws_deploy.sh
+SCRIPT_AWS_PYTHON=aws_install_python.sh
+SCRIPT_AWS_ENV=aws_env.sh
 SCRIPT_AWS_EXECUTE=aws_execute.sh
 AWS_FOLDER=Numerai
 
@@ -34,18 +35,25 @@ else
 
     cat aws_upload_files.txt | xargs -i{} scp -i $LOCAL_KEY_AWS {} ec2-user@$ADDR:~/$AWS_FOLDER
     
-    scp -i $LOCAL_KEY_AWS $SCRIPT_AWS_DEPLOY ec2-user@$ADDR:~/
+    scp -i $LOCAL_KEY_AWS $SCRIPT_AWS_PYTHON ec2-user@$ADDR:~/
+    scp -i $LOCAL_KEY_AWS $SCRIPT_AWS_ENV ec2-user@$ADDR:~/
     scp -i $LOCAL_KEY_AWS $SCRIPT_AWS_EXECUTE ec2-user@$ADDR:~/
 
     ssh -i $LOCAL_KEY_AWS ec2-user@$ADDR "
-        sudo chmod +x '$SCRIPT_AWS_DEPLOY';
-        sudo ./'$SCRIPT_AWS_DEPLOY'"
+        sudo chmod +x '$SCRIPT_AWS_PYTHON';
+        sudo ./'$SCRIPT_AWS_PYTHON'"
 
+    ssh -i $LOCAL_KEY_AWS ec2-user@$ADDR "
+        mv '$SCRIPT_AWS_ENV' Numerai/
+        cd Numerai/
+        sudo chmod +x '$SCRIPT_AWS_ENV';
+        sudo ./'$SCRIPT_AWS_ENV'"
+    
     ssh -i $LOCAL_KEY_AWS ec2-user@$ADDR "
         mv '$SCRIPT_AWS_EXECUTE' Numerai/
         cd Numerai/
         sudo chmod +x '$SCRIPT_AWS_EXECUTE';
-        sudo ./'$SCRIPT_AWS_EXECUTE'"
+        ./'$SCRIPT_AWS_EXECUTE'"
 
     ssh -i $LOCAL_KEY_AWS ec2-user@$ADDR
 
