@@ -1,10 +1,12 @@
 from sklearn.model_selection import train_test_split
-
 import os
 import sys
 import json
+import errno
 import numpy as np
+import pandas as pd
 import itertools
+import json
 
 from pool_map import pool_map
 
@@ -12,6 +14,7 @@ from reader_csv import ReaderCSV
 from model_abstract import Model, ModelType
 from model_generator import ModelGenerator
 
+TARGET_LABEL = 'target_kazutsugi'
 TEST_RATIO = 0.20
 
 # Random Forest
@@ -22,19 +25,28 @@ TEST_RATIO = 0.20
 # min_leaf : >= 4
 
 
-def load_data_matching(data_filename, filter_col, filter_values):
+def load_data(data_filename):
     file_reader = ReaderCSV(data_filename)
-    data_df = file_reader.read_csv(filter_col, filter_values).set_index("id")
+    data_df = file_reader.read_csv().set_index("id")
 
     return data_df
 
 
-def load_data_id(data_filename, id_values):
+def load_data_filter_id(data_filename, list_id, columns=None):
+
+    print("list_id: ", list_id)
     file_reader = ReaderCSV(data_filename)
-    data_df = file_reader.read_csv(
-        skip_lambda=lambda x: x.isin(id_values)).set_index("id")
+    data_df = file_reader.read_csv_filter_id(
+        list_id, columns=columns).set_index("id")
 
     return data_df
+
+
+def load_json(filepath):
+    with open(filepath, 'r') as f:
+        json_data = json.load(f)
+
+        return json_data
 
 
 def make_model_params(eModel, model_prefix=None):
@@ -83,28 +95,15 @@ def make_model_prefix(eModel):
     return [5, 10, 30]
 
 
-def build_models(dir_path, snd_layer_data, bSaveModel=False, bMetrics=False, model_debug=False):
+def snd_layer_model_build(snd_layer_dirname, full_train_data, bSaveModel=False, bMetrics=False, model_debug=False):
 
-    train_df, test_df = train_test_split(
-        snd_layer_data, test_size=TEST_RATIO)
+    train_data, test_data = train_test_split(
+        full_train_data, test_size=TEST_RATIO)
 
-    # bMultiProc = False
-    # if bMultiProc:
-    # Parallelism only shows a slight speed improvment
-    # -> not enough memory for mutliple thread w/ full dataset (?)
-    # model_metrics_arg = list(zip(itertools.repeat(dir_path), itertools.repeat(
-    #     metrics_filename), itertools.repeat(train_data), itertools.repeat(test_data), model_params_array))
-    # pool_map(model_itf.generate_model, model_metrics_arg)
-    # else:
-
-    # model_types = ModelType
-    # model_types = [ModelType.K_NN]
-    # model_types = [ModelType.RandomForest]
     model_types = [ModelType.XGBoost, ModelType.RandomForest,
                    ModelType.NeuralNetwork, ModelType.K_NN]
 
-    model_generator = ModelGenerator(
-        dir_path, train_data, test_data)
+    model_generator = ModelGenerator(snd_layer_dirname, train_data, test_data)
 
     model_l = []
     for model_type in model_types:
@@ -118,43 +117,62 @@ def build_models(dir_path, snd_layer_data, bSaveModel=False, bMetrics=False, mod
             best_ll = sys.float_info.max
             for model_params in model_params_array:
 
+                print("generate model")
                 model, model_dict = model_generator.generate_model(
                     model_params, model_debug)
+                print("model: ", model)
+                print("model_dict: ", model_dict)
 
                 log_loss, _ = model_dict['log_loss'], model_dict['accuracy_score']
 
                 if bSaveModel and (log_loss < best_ll):
                     best_ll = log_loss
-                    model.save_model()
+                    filepath, configpath = model.save_model()
+                    model_dict['model_filepath'] = filepath
+                    model_dict['config_filepath'] = configpath
                     model_l.append(model_dict)
 
-    return model_l
+    res = {'models': model_l}
+    return res
 
 
 def main():
 
-    dirname = 'data_subsets_036'
-    _, subdirs, _ = next(os.walk(dirname))
-    print("subdirs: ", subdirs)
+    snd_layer_dirname = 'data_subsets_036/snd_layer'
 
-    snd_layer_id = load_data_matching(
-        'numerai_training_data_layer.csv', 'fst_layer', False)
-    snd_layer_data = load_data_id(
-        'numerai_training_data.csv', snd_layer_id.index)
-
-    bDebug = False
+    bDebug = True
     bMetrics = False
     bSaveModel = True
 
-    bMultiProc = False
     bSaveModelDict = True
 
-    model_dict_sub_l = build_models(
-        sub_dir_path, snd_layer_data, bSaveModel, bMetrics, bDebug)
+    training_data_filename = 'numerai_training_data.csv'
 
-    if bSaveModelDict:
-        model_dict_filepath = dirname + '/fst_layer_model.json'
-        with open(model_dict_filepath, 'w') as fp:
+    snd_layer_training_data_filename = snd_layer_dirname + '/snd_layer_training_data.csv'
+    snd_layer_training_data = load_data(snd_layer_training_data_filename)
+
+    snd_layer_training_data_target = load_data_filter_id(
+        training_data_filename, snd_layer_training_data.index, ['id', TARGET_LABEL])
+
+    print("snd_layer_training_data: ", snd_layer_training_data)
+    print("snd_layer_training_data_target: ", snd_layer_training_data_target)
+
+    snd_layer_training_data = pd.concat(
+        [snd_layer_training_data, snd_layer_training_data_target], axis=1)
+
+    print("snd_layer_training_data: ", snd_layer_training_data)
+
+    model_dict_sub_l = snd_layer_model_build(snd_layer_dirname, snd_layer_training_data,
+                                             bSaveModel=bSaveModel,
+                                             bMetrics=bMetrics,
+                                             model_debug=bDebug)
+
+    print("model building done")
+
+    if bSaveModel or bSaveModelDict:
+        snd_layer_models_fp = snd_layer_dirname + '/snd_layer_models.json'
+
+        with open(snd_layer_models_fp, 'w') as fp:
             json.dump(model_dict_sub_l, fp, indent=4)
 
 

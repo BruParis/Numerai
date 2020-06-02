@@ -3,6 +3,8 @@ import sys
 import json
 import numpy as np
 import itertools
+import json
+import time
 
 from pool_map import pool_map
 
@@ -23,6 +25,13 @@ def load_data(data_filename):
     data_df = file_reader.read_csv().set_index("id")
 
     return data_df
+
+
+def load_json(filepath):
+    with open(filepath, 'r') as f:
+        json_data = json.load(f)
+
+        return json_data
 
 
 def make_model_params(eModel, model_prefix=None):
@@ -71,7 +80,9 @@ def make_model_prefix(eModel):
     return [5, 10, 30]
 
 
-def subset_model_build(sub_dir_path, bSaveModel=False, bMetrics=False, model_debug=False):
+def subset_model_build(dirname, sub_dirname, bSaveModel=False, bMetrics=False, model_debug=False):
+
+    sub_dir_path = dirname + '/' + sub_dirname
 
     train_filepath = sub_dir_path + '/' + 'training_data.csv'
     test_filepath = sub_dir_path + '/' + 'test_data.csv'
@@ -92,7 +103,7 @@ def subset_model_build(sub_dir_path, bSaveModel=False, bMetrics=False, model_deb
     # model_types = [ModelType.K_NN]
     # model_types = [ModelType.RandomForest]
     model_types = [ModelType.XGBoost, ModelType.RandomForest,
-                   ModelType.NeuralNetwork, ModelType.K_NN]
+                   ModelType.NeuralNetwork]  # , ModelType.K_NN]
 
     model_generator = ModelGenerator(
         sub_dir_path, train_data, test_data)
@@ -116,46 +127,61 @@ def subset_model_build(sub_dir_path, bSaveModel=False, bMetrics=False, model_deb
 
                 if bSaveModel and (log_loss < best_ll):
                     best_ll = log_loss
-                    model.save_model()
+                    filepath, configpath = model.save_model()
+                    model_dict['model_filepath'] = filepath
+                    model_dict['config_filepath'] = configpath
                     model_l.append(model_dict)
 
-    res = {sub_dir_path: model_l}
-    return res
+    return sub_dirname, model_l
 
 
 def main():
 
     dirname = 'data_subsets_036'
     _, subdirs, _ = next(os.walk(dirname))
+    subdirs = [subdir for subdir in subdirs if 'data_subset_' in subdir]
     print("subdirs: ", subdirs)
-    sub_dir_paths = [dirname + '/' + subdirname for subdirname in subdirs]
 
     bDebug = False
     bMetrics = False
     bSaveModel = True
 
-    bMultiProc = False
+    bMultiProc = True
     bSaveModelDict = True
-    print("sub_dir_paths: ", sub_dir_paths)
+
+    start_time = time.time()
 
     # Seems there is a pb with multiprocess (mult. proc w/ same dataframe?)
-    model_dict_l = []
+    model_dict_l = {}
     if bMultiProc:
-        models_build_arg = list(zip(
-            sub_dir_paths, itertools.repeat(bSaveModel), itertools.repeat(bMetrics), itertools.repeat(bDebug)))
-        model_dict_l = pool_map(
+        models_build_arg = list(zip(itertools.repeat(dirname), subdirs, itertools.repeat(
+            bSaveModel), itertools.repeat(bMetrics), itertools.repeat(bDebug)))
+        sub_dir_model_l = pool_map(
             subset_model_build, models_build_arg, collect=True, arg_tuple=True)
+
+        model_dict_l = dict(sub_dir_model_l)
     else:
-        for sub_dir_path in sub_dir_paths:
-            model_dict_sub_l = subset_model_build(
-                sub_dir_path, bSaveModel, bMetrics, bDebug)
+        for sub_dir in subdirs:
+            _, model_dict_sub_l = subset_model_build(
+                dirname, sub_dir, bSaveModel, bMetrics, bDebug)
 
-            model_dict_l.append(model_dict_sub_l)
+            model_dict_l[sub_dir] = model_dict_sub_l
 
-    if bSaveModelDict:
-        model_dict_filepath = dirname + '/fst_layer_model.json'
-        with open(model_dict_filepath, 'w') as fp:
-            json.dump(model_dict_l, fp, indent=4)
+    print("model building done")
+    print("--- %s seconds ---" % (time.time() - start_time))
+
+    if bSaveModel or bSaveModelDict:
+        subset_distrib_filepath = dirname + '/fst_layer_distribution.json'
+
+        subset_dict = load_json(subset_distrib_filepath)
+
+        for sub_name, subset_desc in subset_dict["subsets"].items():
+
+            if sub_name in model_dict_l.keys():
+                subset_desc['models'] = model_dict_l[sub_name]
+
+        with open(subset_distrib_filepath, 'w') as fp:
+            json.dump(subset_dict, fp, indent=4)
 
 
 if __name__ == '__main__':

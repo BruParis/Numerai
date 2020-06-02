@@ -120,7 +120,6 @@ def inter_eras_features(era_ft_dict, eras):
 
 def union_eras_features(era_ft_dict, eras):
     ft_l = set([ft for e in eras for ft in era_ft_dict[e]])
-    print("ft_l: ", ft_l)
 
     # set() breaks ft order -> need to re-order
     ft_sorted = sorted(ft_l, key=lambda ft: ft_cat_order_idx(ft))
@@ -182,7 +181,6 @@ def find_sim_subg(era_ft_dict):
 
             min_s -= 0.01
 
-    print("remaining dict len: ", len(era_ft_dict))
     if len(era_ft_dict) >= MIN_GRAPH_NODE:
         remaining_graph = generate_graph_from_dict(era_ft_dict)
 
@@ -205,12 +203,14 @@ def export_eras_ft_split_file(subsets_dirname, era_ft_dict, e_g, corr_th_str):
     data_subsets = dict({'corr_th': CORR_THRESHOLD})
     data_subsets['original_data_file'] = era_ft_dict['original_data_file']
 
-    data_subsets_eras_ft = [{'name': 'data_subset_'+str(ind), 'eras': [
-        n for n in g.nodes], 'features': union_eras_features(era_ft_dict, g.nodes)}for ind, g in enumerate(graphs)]
+    data_subsets_eras_ft = {'data_subset_' + str(ind):
+                            {'eras': [n for n in g.nodes],
+                             'features': union_eras_features(era_ft_dict, g.nodes)}
+                            for ind, g in enumerate(graphs)}
 
     data_subsets['subsets'] = data_subsets_eras_ft
 
-    filename = "data_subsets_"+corr_th_str+".json"
+    filename = 'fst_layer_distribution.json'
 
     try:
         os.makedirs(subsets_dirname)

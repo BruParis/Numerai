@@ -91,10 +91,9 @@ def split_fst_layer_data(data_df, eras_ft):
     return fst_layer_df, res
 
 
-def generate_data_subsets(subsets_dirname, data_df, eras_fts):
+def generate_data_subsets(subsets_dirname, data_df, subset_name, eras_fts):
     print("generate_data_subsets")
 
-    subset_name = eras_fts['name']
     eras = eras_fts['eras']
     fts = eras_fts['features']
     columns = ['era'] + fts + [TARGET_LABEL]
@@ -121,26 +120,24 @@ def generate_data_subsets(subsets_dirname, data_df, eras_fts):
 def main():
 
     subsets_dirname = 'data_subsets_036'
-    era_model_path = subsets_dirname + '/data_subsets_036.json'
+    era_model_path = subsets_dirname + '/fst_layer_distribution.json'
     data_models = load_data_models(era_model_path)
-
 
     data_df = load_data(data_models['original_data_file'])
     data_remaining_df = pd.DataFrame()
 
-    for n_eras_fts in data_models['subsets']:
-        name = n_eras_fts['name']
+    for name, eras_fts in data_models['subsets'].items():
         if 'data_subset' in name:
             print("name: ", name)
-            print(" -> eras: ", n_eras_fts['eras'])
-            print(" -> ft: ", n_eras_fts['features'])
+            print(" -> eras: ", eras_fts['eras'])
+            print(" -> num ft: ", len(eras_fts['features']))
             fst_layer_data, remaining_data = split_fst_layer_data(
-                data_df, n_eras_fts)
+                data_df, eras_fts)
             data_remaining_df = pd.concat(
                 [data_remaining_df, remaining_data], axis=0)
 
             generate_data_subsets(
-                subsets_dirname, fst_layer_data, n_eras_fts)
+                subsets_dirname, fst_layer_data, name, eras_fts)
 
     data_df = pd.concat([data_df, data_remaining_df], axis=1)
     data_fst_layer_df = data_df['fst_layer'].fillna(True)

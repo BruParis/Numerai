@@ -53,8 +53,6 @@ def era_ft_corr_filtering(eras_ft_target_corr, eras, features, corr_th, original
 
     # print("ft_min_eras_dict: ", ft_min_eras_dict)
     # print("     ---> len: ", len(ft_min_eras_dict))
-    print("eras_min_ft_dict: ", eras_min_ft_dict)
-    print("     ---> len: ", len(eras_min_ft_dict))
 
     corr_th_str = str(corr_th).replace('0.', '')
     eras_min_ft_dict['original_data_file'] = original_data_file

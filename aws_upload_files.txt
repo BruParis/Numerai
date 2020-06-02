@@ -8,15 +8,27 @@ reader_csv.py
 
 era_ft_graph.py
 data_subsets_format.py
+model_itf.py
 reader_csv.py
 pool_map.py
 feature_order.py
 
-generate_fst_layer_models.py
-model_abstract.py
+model_generator.py
 random_forest_model.py
 xgboost_model.py
 neural_net_model.py
 k_nn_model.py
 
+generate_fst_layer_models.py
+
+prediction_operator.py
+
 model_fst_layer_predict_tournament.py
+
+extract_snd_layer_trainig_data.py
+generate_snd_layer_models.py
+
+model_snd_layer_predict_tournament.py
+
+final_prediction.py
+validation_score.py

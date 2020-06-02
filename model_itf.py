@@ -8,6 +8,30 @@ from neural_net_model import NeuralNetwork
 from k_nn_model import K_NNModel
 
 
+def load_model(subset_dirname, eModel, model_prefix=None):
+    if eModel == ModelType.RandomForest:
+        RF_model = RFModel(subset_dirname, debug=False)
+        RF_model.load_model()
+        return RF_model
+
+    if eModel == ModelType.XGBoost:
+        XGB_model = XGBModel(subset_dirname, debug=False)
+        XGB_model.load_model()
+        return XGB_model
+
+    if eModel == ModelType.NeuralNetwork:
+        NN_model = NeuralNetwork(subset_dirname, debug=False)
+        NN_model.load_model()
+        return NN_model
+
+    if eModel == ModelType.K_NN:
+        model_params = {"n_neighbors": model_prefix}
+        k_nn_model = K_NNModel(
+            subset_dirname, model_params=model_params, debug=False)
+        k_nn_model.load_model()
+        return k_nn_model
+
+
 def build_model(dirname, eModel, train_data, test_data, model_params, model_debug=False):
 
     if eModel == ModelType.RandomForest:

@@ -161,7 +161,7 @@ class Model(ABC):
         with open(self.config_filepath, 'w') as fp:
             json.dump(self.model_config(), fp, indent=4)
 
-        return self.filepath
+        return self.filepath, self.config_filepath
 
     def load_model(self):
         self.model = pickle.load(open(self.filepath, 'rb'))
