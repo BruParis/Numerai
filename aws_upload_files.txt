@@ -3,6 +3,8 @@ Pipfile
 numerai_training_data.csv
 numerai_tournament_data.csv
 
+data_subsets_036/final_pred_scores.json
+
 feature_era_corr_split.py
 reader_csv.py
 

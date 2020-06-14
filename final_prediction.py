@@ -28,7 +28,7 @@ def load_data(filepath):
     return input_data
 
 
-def final_predict_layer(dirname, layer_distrib_filepath, data_types_fp, num_layer):
+def final_predict_layer(dirname, layer_distrib_filepath, model_types, data_types_fp, num_layer):
 
     if num_layer not in LAYER_PRED_SUFFIX.keys():
         print("wrong layer number provided")
@@ -57,8 +57,13 @@ def final_predict_layer(dirname, layer_distrib_filepath, data_types_fp, num_laye
                      for col in columns if proba_0_label in col]
 
         for model in model_col:
+
+            if model not in model_types:
+                continue
+
             model_col = [col for col in data_df.columns if model in col]
             model_data = data_df[model_col]
+
             model_col_to_classes = dict(zip(model_data.columns, LABEL_CLASSES))
             model_data = model_data.rename(columns=model_col_to_classes)
             model_prediction = model_data.idxmax(axis=1)
@@ -70,7 +75,12 @@ def final_predict_layer(dirname, layer_distrib_filepath, data_types_fp, num_laye
         arithmetic_mean = pd.DataFrame()
         # geometric_mean = pd.DataFrame()
         for target_class, columns in class_col.items():
-            arithmetic_mean[target_class] = data_df[columns].mean(axis=1)
+
+            filtered_columns = [
+                col for col in columns if col.startswith(tuple(model_types))]
+
+            arithmetic_mean[target_class] = data_df[filtered_columns].mean(
+                axis=1)
             # geometric_mean[target_class] = np.exp(
             #     np.log(data_df[columns].prod(axis=1))/data_df[columns].notna().sum(1))
 
@@ -92,27 +102,35 @@ def main():
 
     data_types = ['validation', 'test', 'live']
 
+    model_types_fp = dirname + '/final_predict_scores.json'
+    # model_types = load_json(model_types_fp)
+    # for key, _ in model_types.items():
+    #     if key
+    model_types = {'fst': {'models': ['xgboost', 'rf', 'neural_net']},
+                   'snd': {'models': ['xgboost', 'rf', 'neural_net']}}
+
+    with open(model_types_fp, 'w') as fp:
+        json.dump(model_types, fp, indent=4)
+
     # FST LAYER
     fst_layer_distrib_filepath = dirname + '/fst_layer_distribution.json'
-    predictions_fst_layer_filepath = [dirname + '/predictions_tournament_validation_fst_layer.csv',
-                                      dirname + '/predictions_tournament_test_fst_layer.csv',
-                                      dirname + '/predictions_tournament_live_fst_layer.csv']
+    predictions_fst_layer_filepath = [
+        dirname + '/predictions_tournament_' + d_t + '_fst_layer.csv' for d_t in data_types]
 
     fst_layer_data_types_fp = list(
         zip(data_types, predictions_fst_layer_filepath))
-    final_predict_layer(dirname, fst_layer_distrib_filepath,
+    final_predict_layer(dirname, fst_layer_distrib_filepath, model_types['fst']['models'],
                         fst_layer_data_types_fp, 1)
 
     # SND LAYER
     snd_layer_dirname = dirname + '/snd_layer'
     snd_layer_distrib_filepath = snd_layer_dirname + '/snd_layer_models.json'
-    predictions_snd_layer_filepath = [snd_layer_dirname + '/predictions_tournament_validation_snd_layer.csv',
-                                      snd_layer_dirname + '/predictions_tournament_test_snd_layer.csv',
-                                      snd_layer_dirname + '/predictions_tournament_live_snd_layer.csv']
+    predictions_snd_layer_filepath = [
+        snd_layer_dirname + '/predictions_tournament_' + d_t + '_snd_layer.csv' for d_t in data_types]
 
     snd_layer_data_types_fp = list(
         zip(data_types, predictions_snd_layer_filepath))
-    final_predict_layer(dirname, snd_layer_distrib_filepath,
+    final_predict_layer(dirname, snd_layer_distrib_filepath, model_types['snd']['models'],
                         snd_layer_data_types_fp, 2)
 
 

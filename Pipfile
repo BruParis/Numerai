@@ -16,6 +16,7 @@ tqdm = "*"
 networkx = "*"
 tensorflow = "*" # -> pipenv has pb installing ts on aws instances
 xgboost = "*"
+numerapi = "*"
 
 [requires]
 python_version = "3.8"

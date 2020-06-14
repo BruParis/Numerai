@@ -15,11 +15,18 @@ BENCHMARK = 0
 BAND = 0.2
 
 try:
-    validation_pred_filepath = sys.argv[1]
+    layer_pred = sys.argv[1]
 except IndexError:
-    print("Usage: validation_score.py <final_prediction_validation.csv>")
-    print("-----> default value : data_subsets_036/final_predict_validation_snd.csv")
-    validation_pred_filepath = 'data_subsets_036/final_predict_validation_snd.csv'
+    print("Usage: validation_score.py <layer used for pred : ['fst', 'snd']>")
+    print("-----> default value : snd")
+    layer_pred = 'snd'
+
+
+def load_json(filepath):
+    with open(filepath, 'r') as f:
+        json_data = json.load(f)
+
+        return json_data
 
 
 def score(data_df, pred_name):
@@ -49,12 +56,18 @@ def load_validation_prediction(pred_validation_filepath):
     file_reader = ReaderCSV(pred_validation_filepath)
     pred_data = file_reader.read_csv().set_index('id')
 
+    if 'era' in pred_data.columns:
+        pred_data = pred_data.drop('era', axis=1)
+
     return pred_data
 
 
 def pred_type_score(validation_data, pred_name):
 
-    print("Validation score for prediction type: ",)
+    if pred_name not in validation_data.columns:
+        return
+
+    print("Validation score for prediction type: ", pred_name)
 
     validation_correlations = validation_data.groupby(
         "era").apply(score, pred_name)
@@ -71,51 +84,65 @@ def pred_type_score(validation_data, pred_name):
     validation_corr_desc = {'valid_corr_mean': valid_corr_mean,
                             'valid_corr_std': valid_corr_std, 'valid_payout': valid_payout}
 
-    # Check consistency
-    print("=============================")
-    eras = validation_data.era.unique()
+    # Check consistency -> need proba
+    # print("=============================")
+    # eras = validation_data.era.unique()
 
-    good_eras = 0
+    # good_eras = 0
 
-    for era in eras:
-        tmp = validation_data[validation_data['era'] == era]
-        ll = log_loss(tmp[TARGET_NAME], tmp[pred_name])
-        is_good = ll < -log(0.5)
+    # for era in eras:
+    #    tmp = validation_data[validation_data['era'] == era]
+    #    ll = log_loss(tmp[TARGET_NAME], tmp[pred_name])
+    #    is_good = ll < -log(0.5)
 
-        if is_good:
-            good_eras += 1
+    #    if is_good:
+    #        good_eras += 1
 
-        print("{} {} {:.2%} {}".format(era, len(tmp), ll, is_good))
+    #    print("{} {} {:.2%} {}".format(era, len(tmp), ll, is_good))
 
-    consistency = good_eras / float(len(eras))
-    print(
-        "\nconsistency: {:.1%} ({}/{})".format(consistency, good_eras, len(eras)))
+    # consistency = good_eras / float(len(eras))
+    # print(
+    #    "\nconsistency: {:.1%} ({}/{})".format(consistency, good_eras, len(eras)))
 
-    ll = log_loss(validation_data.target, validation_data.probability)
-    print("log loss:    {:.2%}\n".format(ll))
+    # ll = log_loss(validation_data.target, validation_data.probability)
+    # print("log loss:    {:.2%}\n".format(ll))
 
-    res = {'validation_corr': validation_corr_desc,
-           'consistency: ': consistency, 'log_loss': ll}
+    # res = {'validation_corr': validation_corr_desc,
+    #       'consistency: ': consistency, 'log_loss': ll}
+
+    res = {'validation_corr': validation_corr_desc}
 
     return res
 
 
 def main():
 
+    dirname = 'data_subsets_036'
+
+    final_pred_descr_fp = dirname + '/final_predict_scores.json'
+    final_pred_descr = load_json(final_pred_descr_fp)
+
+    validation_pred_filepath = {'fst': dirname + '/final_predict_validation_fst.csv',
+                                'snd': dirname + '/final_predict_validation_snd.csv'}
+
+    layer_pred_filepath = validation_pred_filepath[layer_pred]
+
+    pred_types = final_pred_descr[layer_pred]['models'] + ['arithmetic_mean']
+
     # Check the per-era correlations on the validation set
     validation_data = load_validation_data()
-    pred_data = load_validation_prediction(validation_pred_filepath)
+    pred_data = load_validation_prediction(layer_pred_filepath)
 
     validation_data = pd.concat(
         [validation_data, pred_data], axis=1)
 
-    pred_score = {pred_name: pred_type_score(validation_data, pred_name) for pred_name in [
-        'xgboost', 'rf', 'neural_net', 'arithmetic_mean']}
+    pred_scores = {pred_name: pred_type_score(
+        validation_data, pred_name) for pred_name in pred_types}
 
-    pred_score_filepath = validation_pred_filepath.replace(
-        '.csv', '_score.json')
-    with open(pred_score_filepath, 'w') as fp:
-        json.dump(pred_score, fp, indent=4)
+    final_pred_descr[layer_pred]['scores'] = pred_scores
+
+    with open(final_pred_descr_fp, 'w') as fp:
+        json.dump(final_pred_descr, fp, indent=4)
 
 
 if __name__ == '__main__':

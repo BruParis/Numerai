@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import math
+import pandas as pd
 import numpy as np
 import time
 
@@ -55,17 +56,22 @@ def list_chunks(lst):
 
 def main():
 
+    try:
+        data_types = [sys.argv[1]]
+    except IndexError:
+        print(
+            "Usage: validation_score.py <data_type : ['validation', 'test', 'live']>")
+        print("-----> default value : snd")
+        data_types = ['validation', 'test', 'live']
+
     data_subsets_dirname = 'data_subsets_036'
     snd_layer_dirname = data_subsets_dirname + '/snd_layer'
     snd_layer_distrib_filename = 'snd_layer_models.json'
 
     numerai_training_data = 'numerai_training_data.csv'
 
-    data_types = ['validation', 'test', 'live']
-
-    predictions_snd_layer_filepath = [snd_layer_dirname + '/predictions_tournament_validation_snd_layer.csv',
-                                      snd_layer_dirname + '/predictions_tournament_test_snd_layer.csv',
-                                      snd_layer_dirname + '/predictions_tournament_live_snd_layer.csv']
+    predictions_snd_layer_filepath = [snd_layer_dirname +
+                                      '/predictions_tournament_' + d_t + '_snd_layer.csv' for d_t in data_types]
 
     data_types_fp = list(zip(data_types, predictions_snd_layer_filepath))
     file_write_header = {d_t: True for d_t, _ in data_types_fp}
@@ -73,15 +79,16 @@ def main():
     # models_subsets = load_models_json(
     #     data_subsets_dirname, data_subsets_json_path)
 
-    model_types = [ModelType.XGBoost, ModelType.RandomForest, ModelType.K_NN]
+    # model_types = [ModelType.NeuralNetwork]
+    model_types = [ModelType.XGBoost, ModelType.RandomForest,
+                   ModelType.NeuralNetwork]  # , ModelType.K_NN]
 
     bLoadFstLayer = True
     snd_layer_pred_descr = {}
     if bLoadFstLayer:
 
-        predictions_fst_layer_filepath = [data_subsets_dirname + '/predictions_tournament_validation_fst_layer.csv',
-                                          data_subsets_dirname + '/predictions_tournament_test_fst_layer.csv',
-                                          data_subsets_dirname + '/predictions_tournament_live_fst_layer.csv']
+        predictions_fst_layer_filepath = [data_subsets_dirname +
+                                          '/predictions_tournament_' + d_t + '_fst_layer.csv' for d_t in data_types]
 
         data_layers_fp = list(
             zip(data_types, predictions_fst_layer_filepath, predictions_snd_layer_filepath))
@@ -105,6 +112,10 @@ def main():
 
             snd_layer_pred_data = pred_op.make_snd_layer_predict(
                 fst_layer_data)
+
+            # stitch eras back
+            snd_layer_pred_data = pd.concat(
+                [snd_layer_pred_data, fst_layer_data['era']], axis=1)
 
             snd_layer_pred_descr[data_type] = snd_layer_pred_data.columns.values.tolist(
             )

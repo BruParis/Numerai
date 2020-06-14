@@ -18,7 +18,7 @@ TARGET_LABEL = 'target_kazutsugi'
 TEST_RATIO = 0.20
 
 # Random Forest
-# FST ESTIMATION FOR PARAMTERS BOUNDS :
+# FST ESTIMATION FOR PARAMETERS BOUNDS :
 # n_est : < 268;340
 # m_depth :  < 28;32
 # min_splt : >= 10
@@ -51,7 +51,7 @@ def load_json(filepath):
 
 def make_model_params(eModel, model_prefix=None):
     if eModel == ModelType.RandomForest:
-        n_est = [220]  # np.linspace(start=180, stop=250, num=20)
+        n_est = [250]  # np.linspace(start=180, stop=250, num=7)
         max_d = [10]  # np.linspace(10, 20, num=5)
         model_params_array = map(lambda x: {'n_estimators': int(
             x[0]), 'max_depth': int(x[1])}, itertools.product(*[n_est, max_d]))
@@ -59,8 +59,8 @@ def make_model_params(eModel, model_prefix=None):
         return model_params_array
 
     if eModel == ModelType.XGBoost:
-        n_est = [220]  # np.linspace(start=180, stop=250, num=10)
-        max_d = [10]  # np.linspace(10, 20, num=5)
+        n_est = [180]  # np.linspace(start=180, stop=250, num=7)
+        max_d = [5]  # np.linspace(5, 20, num=5)
         # eta = learning_rate
         eta = [1.0]  # np.logspace(start=(-1.0), stop=0.0, base=10.0, num=5)
 
@@ -71,7 +71,7 @@ def make_model_params(eModel, model_prefix=None):
 
     if eModel == ModelType.NeuralNetwork:
         num_layers = [1]  # np.linspace(start=1, stop=4, num=1)
-        layer_size_factor = [0.66]
+        layer_size_factor = [0.5]  # [0.33, 0.5, 0.66]
         model_params_array = map(
             lambda x: {'num_layers': int(x[0]), 'size_factor': float(
                 x[1])}, itertools.product(*[num_layers, layer_size_factor]))
@@ -101,7 +101,7 @@ def snd_layer_model_build(snd_layer_dirname, full_train_data, bSaveModel=False, 
         full_train_data, test_size=TEST_RATIO)
 
     model_types = [ModelType.XGBoost, ModelType.RandomForest,
-                   ModelType.NeuralNetwork, ModelType.K_NN]
+                   ModelType.NeuralNetwork]  # , ModelType.K_NN]
 
     model_generator = ModelGenerator(snd_layer_dirname, train_data, test_data)
 
@@ -144,7 +144,7 @@ def main():
     bMetrics = False
     bSaveModel = True
 
-    bSaveModelDict = True
+    # bSaveModelDict = False
 
     training_data_filename = 'numerai_training_data.csv'
 
@@ -169,7 +169,8 @@ def main():
 
     print("model building done")
 
-    if bSaveModel or bSaveModelDict:
+    # or bSaveModelDict:
+    if bSaveModel:
         snd_layer_models_fp = snd_layer_dirname + '/snd_layer_models.json'
 
         with open(snd_layer_models_fp, 'w') as fp:

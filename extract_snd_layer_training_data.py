@@ -73,6 +73,7 @@ def main():
     eras_list = snd_layer_data['era'].drop_duplicates().values
     print("eras_df: ", eras_list)
 
+    # snd layer predict era by era from fst layer predict data
     pred_fst_layer_data = []
     for era in eras_list:
         print('era: ', era)
@@ -86,6 +87,14 @@ def main():
         pred_fst_layer_data.append(era_pred_data)
 
     pred_fst_layer_full_data = pd.concat(pred_fst_layer_data)
+    # =================================================================
+
+    # snd layer predict from full fst layer predict data
+    # pred_fst_layer_full_data = pred_op_fst_layer.make_fst_layer_predict(
+    #     snd_layer_data)
+    # pred_fst_layer_full_data = pd.concat(
+    #     [snd_layer_data['era'], pred_fst_layer_full_data], axis=1)
+    # =================================================================
 
     snd_layer_training_data_filepath = snd_layer_dirname + \
         '/snd_layer_training_data.csv'

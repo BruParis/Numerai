@@ -13,5 +13,5 @@ pipenv run python3 model_snd_layer_predict_tournament.py
 
 pipenv run python3 final_prediction.py
 
-pipenv run python3 validation_score.py data_subsets_036/final_predict_validation_fst.csv
-pipenv run python3 validation_score.py data_subsets_036/final_predict_validation_snd.csv
+pipenv run python3 validation_score.py fst
+pipenv run python3 validation_score.py snd

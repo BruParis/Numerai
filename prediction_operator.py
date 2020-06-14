@@ -88,7 +88,8 @@ class PredictionOperator():
             sub_ft)][sub_ft]
 
         # ==========================
-        # Need to check best formula for era (sub)subdatasets similarity
+        # Need to check best formula for era (sub)datasets similarity
+        # / len (sub_ft) or len(sub_ft) ** 2 ?
         sub_corr_diff = (sub_ft_corr - subset['corr_mat'].values)
         sub_corr_dist = (sub_corr_diff / len(sub_ft)) ** 2
 
@@ -134,6 +135,10 @@ class PredictionOperator():
         return full_proba
 
     def make_snd_layer_predict(self, fst_layer_data):
+
+        if 'era' in fst_layer_data.columns:
+            fst_layer_data = fst_layer_data.drop('era', axis=1)
+
         self.layer_distrib = self._load_models_json()
 
         print("self.layer_distrib: ", self.layer_distrib)

@@ -62,6 +62,7 @@ class RFModel(Model):
                                             max_depth=self.model_params['max_depth'],
                                             min_samples_split=10,
                                             min_samples_leaf=4,
+                                            warm_start=True,
                                             random_state=0)
 
         train_input, train_target = self._format_input_target(self.train_data)
