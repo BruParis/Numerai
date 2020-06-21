@@ -32,12 +32,12 @@ class ModelGenerator():
         with open(self.metrics_filepath, 'a') as f:
             metrics_df.to_csv(f, header=False, index=False)
 
-    def __init__(self, dir_path, train_data, test_data):
+    def __init__(self, dir_path):
 
         self.dir_path = dir_path
 
-        self.train_data = train_data
-        self.test_data = test_data
+        self.model = None
+        self.model_params = None
 
     def start_model_type(self, model_type, model_prefix=None, write_metrics=False):
         self.model_type = model_type
@@ -58,25 +58,32 @@ class ModelGenerator():
             print("Error: Model is of type K_NN but no prefix provided.")
             return None
 
+        self.model_params = model_params
+
+        self.model = model_itf.generate_model(self.dir_path, self.model_type,
+                                              self.model_params, model_debug=debug)
+
+    def build_evaluate_model(self, train_data, test_data, debug=False):
+
+        self.model.build_model(train_data)
+
         model_dict = dict()
         model_dict['type'] = self.model_type.name
         model_dict['prefix'] = self.model_prefix
 
-        model_dict['params'] = model_params
+        model_dict['params'] = self.model_params
 
-        model = model_itf.build_model(self.dir_path, self.model_type,
-                                      self.train_data, self.test_data,
-                                      model_params, model_debug=debug)
+        print("test_data: ", test_data)
 
-        log_loss, accuracy_score = model.evaluate_model()
+        log_loss, accuracy_score = self.model.evaluate_model(test_data)
 
         if debug:
             print("log_loss: ", log_loss, " - accuracy_score: ", accuracy_score)
 
         if self.write_metrics:
-            self._append_new_metrics(model, log_loss, accuracy_score)
+            self._append_new_metrics(self.model, log_loss, accuracy_score)
 
         model_dict['log_loss'] = log_loss
         model_dict['accuracy_score'] = accuracy_score
 
-        return model, model_dict
+        return self.model, model_dict

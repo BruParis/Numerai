@@ -32,30 +32,23 @@ def load_model(subset_dirname, eModel, model_prefix=None):
         return k_nn_model
 
 
-def build_model(dirname, eModel, train_data, test_data, model_params, model_debug=False):
+def generate_model(dirname, eModel, model_params, model_debug=False):
 
     if eModel == ModelType.RandomForest:
-        RF_model = RFModel(dirname, train_data,
-                           test_data, model_params, model_debug)
-        RF_model.build_model()
+        RF_model = RFModel(dirname, model_params, model_debug)
         return RF_model
 
     if eModel == ModelType.XGBoost:
-        XGB_model = XGBModel(dirname, train_data,
-                             test_data, model_params, model_debug)
-        XGB_model.build_model()
+        XGB_model = XGBModel(dirname, model_params, model_debug)
         return XGB_model
 
     if eModel == ModelType.NeuralNetwork:
         NeuralNet_model = NeuralNetwork(
-            dirname, train_data, test_data, model_params, model_debug)
-        NeuralNet_model.build_model()
+            dirname, model_params, model_debug)
         return NeuralNet_model
 
     if eModel == ModelType.K_NN:
-        K_NN_model = K_NNModel(dirname, train_data,
-                               test_data, model_params, model_debug)
-        K_NN_model.build_model()
+        K_NN_model = K_NNModel(dirname, model_params, model_debug)
         return K_NN_model
 
 

@@ -50,15 +50,18 @@ def main():
 
     sub_dirname = 'data_subsets_036'
 
-    predict_validation_fp = sub_dirname + '/final_predict_validation_snd.csv'
-    predict_test_fp = sub_dirname + '/final_predict_test_snd.csv'
-    predict_live_fp = sub_dirname + '/final_predict_live_snd.csv'
+    pred_suffix = 'snd'  # 'full', 'fst'
+
+    pred_validation_fp = sub_dirname + \
+        '/final_predict_validation_' + pred_suffix + '.csv'
+    pred_test_fp = sub_dirname + '/final_predict_test_' + pred_suffix + '.csv'
+    pred_live_fp = sub_dirname + '/final_predict_live_' + pred_suffix + '.csv'
 
     model_type = 'rf'
 
-    valid_data = load_predict_file(predict_validation_fp, model_type)
-    test_data = load_predict_file(predict_test_fp, model_type)
-    live_data = load_predict_file(predict_live_fp, model_type)
+    valid_data = load_predict_file(pred_validation_fp, model_type)
+    test_data = load_predict_file(pred_test_fp, model_type)
+    live_data = load_predict_file(pred_live_fp, model_type)
 
     pred_data = pd.concat([valid_data, test_data, live_data], axis=0)
     # pred_data = live_data

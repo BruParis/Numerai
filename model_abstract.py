@@ -38,8 +38,8 @@ class Model(ABC):
     # for model type XGB -> era column removal already done for xgb.DMatrix
     def _format_input_target(self, data_df):
 
-        if self.model_type is not ModelType.XGBoost:
-            data_df = data_df.drop([ERA_LABEL], axis=1)
+        # if self.model_type is not ModelType.XGBoost:
+        data_df = data_df.drop([ERA_LABEL], axis=1)
 
         input_df = data_df.drop([TARGET_LABEL], axis=1)
         target_df = data_df.loc[:, [TARGET_LABEL]]
@@ -72,12 +72,11 @@ class Model(ABC):
             self.model_params = config['model_params']
             self.training_score = config['training_score']
 
-    def __init__(self, model_type: ModelType, dirname, train_data=None, test_data=None,
-                 model_params=None, debug=False, filename=None):
+    def __init__(self, model_type: ModelType, dirname, model_params=None,
+                 debug=False, filename=None):
+
         self.dirname = dirname
         self.debug = debug
-        self.train_data = train_data
-        self.test_data = test_data
 
         self.model = None
         self.model_type = model_type
@@ -108,17 +107,17 @@ class Model(ABC):
     def predict_proba(self, data_input):
         pass
 
-    # Neural Net got its own implementation
-    def evaluate_model(self):
+    # Neural Net, XGBoost got their own implementations
+    def evaluate_model(self, test_data):
         if self.model is None:
             print("Model not yet built!")
             return
 
-        if self.test_data is None:
+        if test_data is None:
             print("No test data provided!")
             return
 
-        test_input, test_target = self._format_input_target(self.test_data)
+        test_input, test_target = self._format_input_target(test_data)
         test_target['prediction'] = self.predict(test_input)
 
         # test_fst_rows = test_target[0:10]

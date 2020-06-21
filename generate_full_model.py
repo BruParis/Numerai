@@ -1,10 +1,13 @@
+from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
 import os
 import sys
 import json
+import errno
 import numpy as np
+import pandas as pd
 import itertools
 import json
-import time
 
 from pool_map import pool_map
 
@@ -12,19 +15,34 @@ from reader_csv import ReaderCSV
 from model_abstract import Model, ModelType
 from model_generator import ModelGenerator
 
+TARGET_LABEL = 'target_kazutsugi'
+TEST_RATIO = 0.20
+
 # Random Forest
-# FST ESTIMATION FOR PARAMTERS BOUNDS :
+# FST ESTIMATION FOR PARAMETERS BOUNDS :
 # n_est : < 268;340
 # m_depth :  < 28;32
 # min_splt : >= 10
 # min_leaf : >= 4
 
+ERA_BATCH_SIZE = 8
 
-def load_data(data_filename):
-    file_reader = ReaderCSV(data_filename)
-    data_df = file_reader.read_csv().set_index("id")
 
-    return data_df
+def load_data(data_filepath):
+    file_reader = ReaderCSV(data_filepath)
+    input_data = file_reader.read_csv().set_index('id')
+    input_data = input_data.drop(["data_type"], axis=1)
+
+    return input_data
+
+
+def load_matching_data(data_filepath, era_target):
+    file_reader = ReaderCSV(data_filepath)
+    input_data = file_reader.read_csv_matching(
+        'era', era_target).set_index('id')
+    input_data = input_data.drop(["data_type"], axis=1)
+
+    return input_data
 
 
 def load_json(filepath):
@@ -80,48 +98,48 @@ def make_model_prefix(eModel):
     return [5, 10, 30]
 
 
-def subset_model_build(dirname, sub_dirname, bSaveModel=False, bMetrics=False, model_debug=False):
+def list_chunks(lst):
+    for i in range(0, len(lst), ERA_BATCH_SIZE):
+        yield lst[i:i + ERA_BATCH_SIZE]
 
-    sub_dir_path = dirname + '/' + sub_dirname
 
-    train_filepath = sub_dir_path + '/' + 'training_data.csv'
-    test_filepath = sub_dir_path + '/' + 'test_data.csv'
+def model_build(dirname, bSaveModel=False, bMetrics=False, model_debug=False):
 
-    train_data = load_data(train_filepath)
-    test_data = load_data(test_filepath)
+    data_filename = 'numerai_training_data.csv'
 
-    # bMultiProc = False
-    # if bMultiProc:
-    # Parallelism only shows a slight speed improvment
-    # -> not enough memory for mutliple thread w/ full dataset (?)
-    # model_metrics_arg = list(zip(itertools.repeat(sub_dir_path), itertools.repeat(
-    #     metrics_filename), itertools.repeat(train_data), itertools.repeat(test_data), model_params_array))
-    # pool_map(model_itf.generate_model, model_metrics_arg)
-    # else:
+    model_types = [ModelType.RandomForest, ModelType.XGBoost,
+                   ModelType.NeuralNetwork, ModelType.K_NN]
 
-    # model_types = ModelType
-    # model_types = [ModelType.K_NN]
-    # model_types = [ModelType.RandomForest]
-    model_types = [ModelType.XGBoost, ModelType.RandomForest,
-                   ModelType.NeuralNetwork]  # , ModelType.K_NN]
-
-    model_generator = ModelGenerator(sub_dir_path)
+    model_generator = ModelGenerator(dirname)
 
     model_l = []
+
     for model_type in model_types:
         for model_prefix in make_model_prefix(model_type):
 
             model_generator.start_model_type(
                 model_type, model_prefix, bMetrics)
 
-            model_params_array = make_model_params(model_type, model_prefix)
+            model_params_array = make_model_params(
+                model_type, model_prefix)
 
             best_ll = sys.float_info.max
             for model_params in model_params_array:
-
                 model_generator.generate_model(model_params, model_debug)
+
+                input_data = load_data(data_filename)
+
+                input_data = shuffle(input_data)
+
+                train_data, test_data = train_test_split(
+                    input_data, test_size=TEST_RATIO)
+
+                print("generate model")
+                print("train_data: ", train_data)
                 model, model_dict = model_generator.build_evaluate_model(
                     train_data, test_data)
+                print("model: ", model)
+                print("model_dict: ", model_dict)
 
                 log_loss, _ = model_dict['log_loss'], model_dict['accuracy_score']
 
@@ -132,56 +150,39 @@ def subset_model_build(dirname, sub_dirname, bSaveModel=False, bMetrics=False, m
                     model_dict['config_filepath'] = configpath
                     model_l.append(model_dict)
 
-    return sub_dirname, model_l
+    res = {'models': model_l}
+    return res
 
 
 def main():
 
-    dirname = 'data_subsets_036'
-    _, subdirs, _ = next(os.walk(dirname))
-    subdirs = [subdir for subdir in subdirs if 'data_subset_' in subdir]
-    print("subdirs: ", subdirs)
-
-    bDebug = False
+    bDebug = True
     bMetrics = False
     bSaveModel = True
 
-    bMultiProc = True
-    bSaveModelDict = True
+    # bSaveModelDict = False
 
-    start_time = time.time()
+    dirname = 'data_subsets_036/full'
 
-    # Seems there is a pb with multiprocess (mult. proc w/ same dataframe?)
-    model_dict_l = {}
-    if bMultiProc:
-        models_build_arg = list(zip(itertools.repeat(dirname), subdirs, itertools.repeat(
-            bSaveModel), itertools.repeat(bMetrics), itertools.repeat(bDebug)))
-        sub_dir_model_l = pool_map(
-            subset_model_build, models_build_arg, collect=True, arg_tuple=True)
+    try:
+        os.makedirs(dirname)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            print("Error with : make dir ", dirname)
+            exit(1)
 
-        model_dict_l = dict(sub_dir_model_l)
-    else:
-        for sub_dir in subdirs:
-            _, model_dict_sub_l = subset_model_build(
-                dirname, sub_dir, bSaveModel, bMetrics, bDebug)
-
-            model_dict_l[sub_dir] = model_dict_sub_l
+    model_dict_sub_l = model_build(dirname, bSaveModel=bSaveModel,
+                                   bMetrics=bMetrics,
+                                   model_debug=bDebug)
 
     print("model building done")
-    print("--- %s seconds ---" % (time.time() - start_time))
 
-    if bSaveModel or bSaveModelDict:
-        subset_distrib_filepath = dirname + '/fst_layer_distribution.json'
+    # or bSaveModelDict:
+    if bSaveModel:
+        full_models_fp = dirname + '/full_models.json'
 
-        subset_dict = load_json(subset_distrib_filepath)
-
-        for sub_name, subset_desc in subset_dict["subsets"].items():
-
-            if sub_name in model_dict_l.keys():
-                subset_desc['models'] = model_dict_l[sub_name]
-
-        with open(subset_distrib_filepath, 'w') as fp:
-            json.dump(subset_dict, fp, indent=4)
+        with open(full_models_fp, 'w') as fp:
+            json.dump(model_dict_sub_l, fp, indent=4)
 
 
 if __name__ == '__main__':

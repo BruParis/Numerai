@@ -11,7 +11,7 @@ LABEL_CLASSES = ['0.0', '0.25', '0.5', '0.75', '1.0']
 COL_PROBA_NAMES = ['proba_0.0', 'proba_0.25',
                    'proba_0.5', 'proba_0.75', 'proba_1.0']
 
-LAYER_PRED_SUFFIX = {1: '_fst', 2: '_snd'}
+LAYER_PRED_SUFFIX = {0: '_full', 1: '_fst', 2: '_snd'}
 
 
 def load_json(filepath):
@@ -85,7 +85,6 @@ def final_predict_layer(dirname, layer_distrib_filepath, model_types, data_types
             #     np.log(data_df[columns].prod(axis=1))/data_df[columns].notna().sum(1))
 
         result_vote['arithmetic_mean'] = arithmetic_mean.idxmax(axis=1)
-        # result_vote['geometric_mean'] = geometric_mean.idxmax(axis=1)
 
         predict_file_suffix = LAYER_PRED_SUFFIX[num_layer]
         predict_filepath = dirname + '/final_predict_' + \
@@ -103,14 +102,24 @@ def main():
     data_types = ['validation', 'test', 'live']
 
     model_types_fp = dirname + '/final_predict_scores.json'
-    # model_types = load_json(model_types_fp)
-    # for key, _ in model_types.items():
-    #     if key
-    model_types = {'fst': {'models': ['xgboost', 'rf', 'neural_net']},
+
+    model_types = {'full': {'models': ['xgboost', 'rf', 'neural_net']},
+                   'fst': {'models': ['xgboost', 'rf', 'neural_net']},
                    'snd': {'models': ['xgboost', 'rf', 'neural_net']}}
 
     with open(model_types_fp, 'w') as fp:
         json.dump(model_types, fp, indent=4)
+
+    # FULL
+    full_dirname = dirname + '/full'
+    full_models_filepath = full_dirname + '/full_models.json'
+    predictions_full_filepath = [
+        full_dirname + '/predictions_tournament_' + d_t + '_full.csv' for d_t in data_types]
+
+    fulll_data_types_fp = list(
+        zip(data_types, predictions_full_filepath))
+    final_predict_layer(dirname, full_models_filepath, model_types['full']['models'],
+                        fulll_data_types_fp, 0)
 
     # FST LAYER
     fst_layer_distrib_filepath = dirname + '/fst_layer_distribution.json'

@@ -1,27 +1,25 @@
 from reader_csv import ReaderCSV
+import sklearn.metrics as sm
 import xgboost as xgb
 
-from model_abstract import Model, ModelType, TARGET_VALUES, ERA_LABEL
+from model_abstract import Model, ModelType, TARGET_VALUES, ERA_LABEL, TARGET_LABEL
 
 
 class XGBModel(Model):
 
-    def __init__(self, dirname, train_data=None, test_data=None,
-                 model_params=None, debug=False, filename=None):
+    def _xgbformat_data(self, data):
+        data = data.drop([ERA_LABEL], axis=1)
+        res = xgb.DMatrix(data, label=TARGET_VALUES)
 
-        if train_data is not None:
-            train_data = train_data.drop([ERA_LABEL], axis=1)
-            self.train_data = xgb.DMatrix(train_data, label=TARGET_VALUES)
+        return res
 
-        if test_data is not None:
-            test_data = test_data.drop([ERA_LABEL], axis=1)
-            self.test_data = xgb.DMatrix(test_data, label=TARGET_VALUES)
+    def __init__(self, dirname, model_params=None, debug=False, filename=None):
 
-        Model.__init__(self, ModelType.XGBoost,
-                       dirname, train_data, test_data, model_params, debug, filename)
+        Model.__init__(self, ModelType.XGBoost, dirname,
+                       model_params, debug, filename)
 
-    def build_model(self):
-        if self.train_data is None:
+    def build_model(self, train_data_pd):
+        if train_data_pd is None:
             print("No train data provided!")
             return
 
@@ -41,22 +39,54 @@ class XGBModel(Model):
                                        booster='gbtree',
                                        n_jobs=-1)
         # train(..., eval_metric=evals, early_stopping_rounds=10)
-        train_input, train_target = self._format_input_target(self.train_data)
+        # train_data_format = self._xgbformat_data(train_data_pd)
+
+        train_input, train_target = self._format_input_target(
+            train_data_pd)
 
         self.n_features = len(train_input.columns)
 
         train_target_r = train_target.values.ravel()
 
-        if self.debug:
-            test_input, test_target = self._format_input_target(
-                self.test_data)
-            test_target_r = test_target.values.ravel()
-            eval_set = [(train_input, train_target_r),
-                        (test_input, test_target_r)]
+        print("START TRAINING")
+        self.model.fit(train_input, train_target_r)
 
-            self.model.fit(train_input, train_target_r, eval_set=eval_set)
-        else:
-            self.model.fit(train_input, train_target_r)
+        print("DONE")
+
+    def evaluate_model(self, test_data_pd):
+        if self.model is None:
+            print("Model not yet built!")
+            return
+
+        if test_data_pd is None:
+            print("No test data provided!")
+            return
+
+        test_input, test_target = self._format_input_target(test_data_pd)
+
+        test_target['prediction'] = self.predict(test_input)
+
+        if self.debug:
+            self._display_cross_tab(test_input, test_target)
+
+        test_proba = self.predict_proba(test_input)
+
+        if self.debug:
+            print("test proba: ", test_proba)
+
+        test_target['proba'] = test_proba.tolist()
+        log_loss = sm.log_loss(test_target[TARGET_LABEL], test_proba.tolist())
+        accuracy_score = sm.accuracy_score(
+            test_target[TARGET_LABEL], test_target['prediction'])
+
+        self.training_score['log_loss'] = log_loss
+        self.training_score['accuracy_score'] = accuracy_score
+
+        if self.debug:
+            print("model evaluation - log_loss: ", log_loss,
+                  " - accuracy_score: ", accuracy_score)
+
+        return log_loss, accuracy_score
 
     def predict(self, data_input):
         prediction = self.model.predict(data_input)

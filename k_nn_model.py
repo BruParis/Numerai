@@ -6,12 +6,12 @@ from model_abstract import Model, ModelType, TARGET_VALUES, ERA_LABEL
 
 class K_NNModel(Model):
 
-    def __init__(self, dirname, train_data=None, test_data=None, model_params=None, debug=False, filename=None):
-        Model.__init__(self, ModelType.K_NN, dirname, train_data,
-                       test_data, model_params, debug, filename)
+    def __init__(self, dirname, model_params=None, debug=False, filename=None):
+        Model.__init__(self, ModelType.K_NN, dirname,
+                       model_params, debug, filename)
 
-    def build_model(self):
-        if self.train_data is None:
+    def build_model(self, train_data):
+        if train_data is None:
             print("No train data provided!")
             return
 
@@ -29,7 +29,7 @@ class K_NNModel(Model):
             leaf_size=self.model_params['leaf_size'],
             p=self.model_params['minkowski_dist'])
 
-        train_input, train_target = self._format_input_target(self.train_data)
+        train_input, train_target = self._format_input_target(train_data)
 
         self.n_features = len(train_input.columns)
 

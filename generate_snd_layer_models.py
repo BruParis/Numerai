@@ -103,7 +103,7 @@ def snd_layer_model_build(snd_layer_dirname, full_train_data, bSaveModel=False, 
     model_types = [ModelType.XGBoost, ModelType.RandomForest,
                    ModelType.NeuralNetwork]  # , ModelType.K_NN]
 
-    model_generator = ModelGenerator(snd_layer_dirname, train_data, test_data)
+    model_generator = ModelGenerator(snd_layer_dirname)
 
     model_l = []
     for model_type in model_types:
@@ -118,8 +118,9 @@ def snd_layer_model_build(snd_layer_dirname, full_train_data, bSaveModel=False, 
             for model_params in model_params_array:
 
                 print("generate model")
-                model, model_dict = model_generator.generate_model(
-                    model_params, model_debug)
+                model_generator.generate_model(model_params, model_debug)
+                model, model_dict = model_generator.build_evaluate_model(
+                    train_data, test_data)
                 print("model: ", model)
                 print("model_dict: ", model_dict)
 

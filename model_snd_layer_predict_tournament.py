@@ -110,8 +110,7 @@ def main():
             pred_op = PredictionOperator(
                 snd_layer_dirname, snd_layer_distrib_filename, model_types, bMultiProcess=False)
 
-            snd_layer_pred_data = pred_op.make_snd_layer_predict(
-                fst_layer_data)
+            snd_layer_pred_data = pred_op.make_full_predict(fst_layer_data)
 
             # stitch eras back
             snd_layer_pred_data = pd.concat(

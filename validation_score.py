@@ -17,7 +17,8 @@ BAND = 0.2
 try:
     layer_pred = sys.argv[1]
 except IndexError:
-    print("Usage: validation_score.py <layer used for pred : ['fst', 'snd']>")
+    print(
+        "Usage: validation_score.py <layer used for pred : ['full', 'fst', 'snd']>")
     print("-----> default value : snd")
     layer_pred = 'snd'
 
@@ -122,7 +123,8 @@ def main():
     final_pred_descr_fp = dirname + '/final_predict_scores.json'
     final_pred_descr = load_json(final_pred_descr_fp)
 
-    validation_pred_filepath = {'fst': dirname + '/final_predict_validation_fst.csv',
+    validation_pred_filepath = {'full': dirname + '/final_predict_validation_full.csv',
+                                'fst': dirname + '/final_predict_validation_fst.csv',
                                 'snd': dirname + '/final_predict_validation_snd.csv'}
 
     layer_pred_filepath = validation_pred_filepath[layer_pred]

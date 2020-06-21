@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import math
+import argparse
 import pandas as pd
 import numpy as np
 import time
@@ -49,35 +50,45 @@ def list_chunks(lst):
         yield lst[i:i + ERA_BATCH_SIZE]
 
 
+def usage():
+    print("Usage: validation_score.py <data_type> <full>")
+    print("     -> data_type value : ['validation', 'test', 'live']")
+    print("     -> <full> : None -> use subsets; 'full' full dataset")
+    return
+
+
 def main():
 
-    try:
-        data_types = [sys.argv[1]]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("data_type",
+                        help="<data_type> used for prediction",
+                        nargs='*',
+                        default=['validation', 'test', 'live'])
+    parser.add_argument("-f", "--full", action='store_true',
+                        help="use full dataset")
+    args = parser.parse_args()
+    data_types = args.data_type
+    bFull = args.full
 
-    except IndexError:
-        print(
-            "Usage: validation_score.py <data_type : ['validation', 'test', 'live']>")
-        print("-----> default value : snd")
-        data_types = ['validation', 'test', 'live']
+    print('data_types: ', data_types)
+    print('use full dataset: ', bFull)
 
-    data_subsets_dirname = 'data_subsets_036'
-    fst_layer_distrib_filename = '/fst_layer_distribution.json'
+    data_subsets_dirname = 'data_subsets_036/full' if bFull else 'data_subsets_036'
+    models_filename = '/full_models.json' if bFull else '/fst_layer_distribution.json'
+    prediction_suffix = '_full.csv' if bFull else '_fst_layer.csv'
 
     predictions_filepath = [data_subsets_dirname +
-                            '/predictions_tournament_' + d_t + '_fst_layer.csv' for d_t in data_types]
+                            '/predictions_tournament_' + d_t + prediction_suffix for d_t in data_types]
 
     data_types_fp = list(zip(data_types, predictions_filepath))
     file_write_header = {d_t: True for d_t, _ in data_types_fp}
-
-    # models_subsets = load_models_json(
-    #     data_subsets_dirname, data_subsets_json_path)
 
     eras_type_df = load_eras_data_type()
 
     model_types = [ModelType.XGBoost,
                    ModelType.RandomForest, ModelType.NeuralNetwork]
 
-    fst_layer_pred_descr = {}
+    prediction_descr = {}
     for data_t, fpath in data_types_fp:
 
         eras_df = eras_type_df.loc[eras_type_df['data_type'] == data_t]
@@ -101,17 +112,18 @@ def main():
                 if input_type_data.empty:
                     continue
 
-                pred_op = PredictionOperator(data_subsets_dirname, fst_layer_distrib_filename, model_types,
+                pred_op = PredictionOperator(data_subsets_dirname, models_filename, model_types,
                                              bMultiProcess=True)
 
-                pred_data = pred_op.make_fst_layer_predict(input_type_data)
+                pred_data = pred_op.make_full_predict(
+                    input_type_data) if bFull else pred_op.make_fst_layer_predict(input_type_data)
 
                 # stitch eras back
                 pred_data = pd.concat(
                     [pred_data, input_type_data['era']], axis=1)
 
                 if file_write_header[data_t]:
-                    fst_layer_pred_descr[data_t] = pred_data.columns.values.tolist(
+                    prediction_descr[data_t] = pred_data.columns.values.tolist(
                     )
 
                 write_mode = 'w' if file_write_header[data_t] else 'a'
@@ -122,12 +134,12 @@ def main():
 
         print("--- %s seconds ---" % (time.time() - start_time))
 
-    fst_layer_distrib_filpath = data_subsets_dirname + fst_layer_distrib_filename
-    fst_layer_distrib = load_json(fst_layer_distrib_filpath)
-    fst_layer_distrib['prediction'] = fst_layer_pred_descr
+    models_descr_filpath = data_subsets_dirname + models_filename
+    models_descr = load_json(models_descr_filpath)
+    models_descr['prediction'] = prediction_descr
 
-    with open(fst_layer_distrib_filpath, 'w') as fp:
-        json.dump(fst_layer_distrib, fp, indent=4)
+    with open(models_descr_filpath, 'w') as fp:
+        json.dump(models_descr, fp, indent=4)
 
 
 if __name__ == '__main__':

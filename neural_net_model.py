@@ -135,23 +135,19 @@ class NeuralNetwork(Model):
 
         return full_layers
 
-    def __init__(self, dirname, train_data=None, test_data=None, model_params=None, debug=False, filename=None,):
+    def __init__(self, dirname, model_params=None, debug=False, filename=None,):
         Model.__init__(self, ModelType.NeuralNetwork,
-                       dirname, train_data, test_data, model_params, debug, filename)
+                       dirname, model_params, debug, filename)
 
-    def build_model(self):
-        if self.train_data is None:
-            print("No train data provided!")
-            return
-
-        if self.test_data is None:
+    def build_model(self, train_data):
+        if train_data is None:
             print("No train data provided!")
             return
 
         if self.debug:
             print("model params: ", self.model_params)
 
-        train_input, train_target = self._format_input_target(self.train_data)
+        train_input, train_target = self._format_input_target(train_data)
         packed_train_ds = self._pack_input_target_ds(
             train_input, train_target, BATCH_SIZE_TRAIN)
 
@@ -176,8 +172,8 @@ class NeuralNetwork(Model):
         # , callbacks=[cp_callback])
         self.model.fit(packed_train_ds, epochs=20)
 
-    def evaluate_model(self):
-        test_input, test_target = self._format_input_target(self.test_data)
+    def evaluate_model(self, test_data):
+        test_input, test_target = self._format_input_target(test_data)
         packed_test_input_target_ds = self._pack_input_target_ds(
             test_input, test_target, BATCH_SIZE_PREDICT)
 

@@ -9,6 +9,7 @@ from model_abstract import ModelType
 from pool_map import pool_map
 from reader_csv import ReaderCSV
 
+TARGET_LABEL = 'target_kazutsugi'
 COL_PROBA_NAMES = ['proba_0.0', 'proba_0.25',
                    'proba_0.5', 'proba_0.75', 'proba_1.0']
 
@@ -35,11 +36,11 @@ class PredictionOperator():
 
             return layer_distrib
 
-    def _model_proba(self, sub_path, model_type, model_prefix, input_data):
-        print("sub_path: ", sub_path)
+    def _model_proba(self, model_path, model_type, model_prefix, input_data):
+        print("path: ", model_path)
         print("model_type: ", model_type)
         print("model_prefix: ", model_prefix)
-        model = model_itf.load_model(sub_path, model_type, model_prefix)
+        model = model_itf.load_model(model_path, model_type, model_prefix)
 
         prediction_proba = model.predict_proba(input_data)
 
@@ -134,10 +135,16 @@ class PredictionOperator():
 
         return full_proba
 
-    def make_snd_layer_predict(self, fst_layer_data):
+    def make_full_predict(self, data_df):
 
-        if 'era' in fst_layer_data.columns:
-            fst_layer_data = fst_layer_data.drop('era', axis=1)
+        if 'era' in data_df.columns:
+            data_df = data_df.drop('era', axis=1)
+
+        if 'data_type' in data_df.columns:
+            data_df = data_df.drop('data_type', axis=1)
+
+        if TARGET_LABEL in data_df.columns:
+            data_df = data_df.drop(TARGET_LABEL, axis=1)
 
         self.layer_distrib = self._load_models_json()
 
@@ -155,7 +162,7 @@ class PredictionOperator():
             prefix = model_desc['prefix']
 
             pred_model_proba = self._model_proba(
-                self.dirname, eModel, prefix, fst_layer_data)
+                self.dirname, eModel, prefix, data_df)
 
             print("pred_model_proba: ", pred_model_proba)
 
