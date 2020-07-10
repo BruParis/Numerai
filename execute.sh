@@ -18,4 +18,4 @@ pipenv run python3 final_prediction.py
 
 pipenv run python3 validation_score.py fst
 pipenv run python3 validation_score.py snd
-pipenv run python3 validation_score.py full
+# pipenv run python3 validation_score.py full
