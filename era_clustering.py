@@ -1,5 +1,6 @@
 from reader_csv import ReaderCSV
 from era_comparator import EraComparator
+from model_constitution import ModelConstitution
 import json
 import pylab
 import numpy as np
@@ -19,6 +20,8 @@ MIN_NUM_ERAS = 6
 # MIN_NUM_ERAS = 3
 CL_THRESHOLD_FT_SCORE = 0.80
 ERA_CL_DIRNAME = 'data_clusters'
+MODEL_CONSITUTION_FP = ERA_CL_DIRNAME + '/model_constitution.json'
+ERA_CROSS_SCORE_FP = ERA_CL_DIRNAME + '/era_cross_score.csv'
 
 
 def plot_mat(data):
@@ -244,7 +247,8 @@ def cluster_ft_selection(era_comp, cl_dict):
         # plot_fts_score(cl_fts_full_scores_df)
 
         cumul_ft_score = 0
-        cl_cumul_ft_score = pd.Series(index=cl_fts_full_scores_df.index)
+        cl_cumul_ft_score = pd.Series(
+            index=cl_fts_full_scores_df.index, dtype=np.float32)
         for ft in cl_fts_full_scores_df.index:
             cumul_ft_score += cl_fts_full_scores_df.loc[ft]
             cl_cumul_ft_score[ft] = cumul_ft_score
@@ -261,31 +265,23 @@ def cluster_ft_selection(era_comp, cl_dict):
     return cl_dict
 
 
-def makedir_cluster(era_comp, era_cl_dict, corr_data_idx):
+def save_clusters(model_c, era_comp, era_cl_dict, corr_data_idx):
 
-    try:
-        os.makedirs(ERA_CL_DIRNAME)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            print("Error with : make dir ", ERA_CL_DIRNAME)
-            exit(1)
+    model_c.clusters = era_cl_dict
+    model_c.save()
 
-    era_cl_filepath = ERA_CL_DIRNAME + '/era_clusters.json'
-    with open(era_cl_filepath, 'w') as f:
-        json.dump(era_cl_dict, f, indent=4)
-
-    era_cross_t_corr_df = pd.DataFrame(
+    era_cross_score_df = pd.DataFrame(
         era_comp.era_score_mat, columns=corr_data_idx, index=corr_data_idx)
 
-    era_cross_t_corr_filepath = ERA_CL_DIRNAME + '/era_cross_t_corr.csv'
-    era_cross_t_corr_df.to_csv(era_cross_t_corr_filepath)
+    era_cross_score_df.to_csv(ERA_CROSS_SCORE_FP)
 
 
 def main():
 
-    era_ft_corr_filename = "eras_ft_target_corr.csv"
+    model_c = ModelConstitution(MODEL_CONSITUTION_FP)
+    model_c.load()
 
-    file_reader = ReaderCSV(era_ft_corr_filename)
+    file_reader = ReaderCSV(model_c.eras_ft_t_corr_file)
     corr_data_df = file_reader.read_csv().set_index("era")
 
     #corr_data_df = corr_data_df.iloc[0: 40]
@@ -300,7 +296,7 @@ def main():
     cluster_ft_selection(era_comp, era_cl_dict)
 
     corr_data_idx = corr_data_df.index
-    makedir_cluster(era_comp, era_cl_dict, corr_data_idx)
+    save_clusters(model_c, era_comp, era_cl_dict, corr_data_idx)
 
 
 if __name__ == '__main__':
