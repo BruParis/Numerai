@@ -125,6 +125,7 @@ class NeuralNetwork(Model):
         layers_size = [int(self.n_features * math.pow(self.model_params['size_factor'], i))
                        for i in range(1, self.model_params['num_layers']+1)]
 
+        # use gelu instead of relu?
         dense_layers_tuple = [[tf.keras.layers.Dense(size, activation='relu'),
                                tf.keras.layers.Dropout(.2)] for size in layers_size]
         dense_layers = [

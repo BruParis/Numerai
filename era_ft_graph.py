@@ -11,7 +11,7 @@ from networkx.algorithms.community import k_clique_communities
 MIN_FEATURES = 7
 
 MIN_GRAPH_NODE = 4  # MIN_GRAPH_NODE * eras should make a training dataset large enough
-MIN_RATIO_COMMON_FT = 0.6  # 6% of all features in eras subgraph must be common to all
+MIN_RATIO_COMMON_FT = 0.6  # 60% of all features in eras subgraph must be common to all
 
 COND_GRAPH_NODE = 8
 COND_GRAPH_UNION_FTS = 70
