@@ -55,7 +55,7 @@ def plot_matrix_clustering(era_comp, era_cl_dict, save=False):
     im_shape = im.get_extent()
     era_length = (im_shape[1] - im_shape[0]) / num_eras
     for _, cl in era_cl_dict.items():
-        eras_idxs = cl['eras']
+        eras_idxs = cl['eras_idx']
         eras_dend_idx = [era_comp.era_to_dend_idx[e] for e in eras_idxs]
         square_min = era_length * min(eras_dend_idx)
         square_max = era_length * max(eras_dend_idx)
@@ -105,9 +105,11 @@ def find_fst_idx_value(data_l, value):
 
 
 def caracterize_cl(era_comp, cl):
-    cl['eras_dend_idx'] = [era_comp.era_to_dend_idx[era] for era in cl['eras']]
+    cl['eras_name'] = ['era'+str(era_idx+1) for era_idx in cl['eras_idx']]
+    cl['eras_dend_idx'] = [era_comp.era_to_dend_idx[era_idx]
+                           for era_idx in cl['eras_idx']]
     cl['score'] = era_comp.cluster_ponderated_score(cl['eras_dend_idx'])
-    cl['small'] = len(cl['eras']) < MIN_NUM_ERAS
+    cl['small'] = len(cl['eras_idx']) < MIN_NUM_ERAS
     cl['full_score'] = None
     cl['selected_features'] = None
     return cl
@@ -115,7 +117,7 @@ def caracterize_cl(era_comp, cl):
 
 def set_cl_dict(era_comp, era_cluster_idx):
     clusters = set(era_cluster_idx)
-    cl_dict = {str(cl): {'eras': find_value_indexes(
+    cl_dict = {'cluster_' + str(cl): {'eras_idx': find_value_indexes(
         era_cluster_idx, cl)} for cl in clusters}
     cl_dict = {cl: caracterize_cl(era_comp, v) for cl, v in cl_dict.items()}
 
@@ -172,7 +174,7 @@ def aggregate_small_clusters(era_comp, cl_dict):
                 b_go_left = l_dist_score < r_dist_score
 
             agg_cl = cl_dict[left_cl] if b_go_left else cl_dict[right_cl]
-            agg_cl['eras'] = agg_cl['eras'] + s_cl_caract['eras']
+            agg_cl['eras_idx'] = agg_cl['eras_idx'] + s_cl_caract['eras_idx']
             caracterize_cl(era_comp, agg_cl)
 
             del_s_cl.append(s_cl)
@@ -227,8 +229,8 @@ def cluster_ft_selection(era_comp, cl_dict):
 
     for _, cl_caract in cl_dict.items():
         cl_fts_scores = [era_comp.era_i_j_ft_score[era_i][era_j]
-                         for era_i in cl_caract['eras']
-                         for era_j in cl_caract['eras']]
+                         for era_i in cl_caract['eras_idx']
+                         for era_j in cl_caract['eras_idx']]
         cl_fts_scores_df = pd.concat(cl_fts_scores, axis=1)
 
         # CHOICE
