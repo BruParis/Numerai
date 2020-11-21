@@ -18,6 +18,8 @@ tensorflow = "*" # -> pipenv has pb installing ts on aws instances
 xgboost = "*"
 numerapi = "*"
 seaborn = "*"
+numerai = {path = "./dist/Numerai-0.1.tar.gz"}
+pylint = "*"
 
 [requires]
 python_version = "3.8"
