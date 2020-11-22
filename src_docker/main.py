@@ -4,15 +4,10 @@ import time
 from collections import deque
 
 from common import *
-from corr_analysis import feature_era_corr
-from clustering import clustering
-from data_instruments import split_data_clusters, snd_layer_training_data
-from models import generate_models
 from reader import set_h5_stores
 from prediction import make_prediction, final_pred, validation_score, upload_results
 
-ALL_OPERATIONS = ['set_h5', 'ft_era_corr', 'split_data', 'train',
-                  'prediction', 'final_prediction', 'upload']
+ALL_OPERATIONS = ['set_h5', 'prediction', 'final_prediction', 'upload']
 
 
 def print_funct_calls(layers, strategies, operations_q):
@@ -39,31 +34,10 @@ def print_funct_calls(layers, strategies, operations_q):
                     print('   --> final_pred')
                     print('   --> validation_pred')
                     continue
-                if op == 'train':
-                    print('   --> generate_models')
-                    continue
 
                 if op == 'upload':
                     print('   --> upload results')
                     break
-
-                if l == 'fst':
-                    if op == 'ft_era_corr':
-                        print('   --> feature_era_corr')
-                        continue
-                    if op == 'split_data':
-                        if stra == STRAT_CLUSTER:
-                            print('   --> clustering')
-                        print('   --> split_data_clusters')
-                        continue
-
-                elif l == 'snd':
-                    if op == 'split_data':
-                        print('   --> snd_layer_training_data')
-                        continue
-                    elif op == 'train':
-                        print('   --> generate_models')
-                        continue
 
 
 def main(argv):
@@ -115,10 +89,6 @@ def main(argv):
             set_h5_stores()
             continue
 
-        if op == 'ft_era_corr':
-            feature_era_corr(TRAINING_DATA_FP, TRAINING_STORE_H5_FP)
-            continue
-
         for stra in strategies:
             print("strat: ", stra)
             strat_dir = ERA_CL_DIRNAME if stra == STRAT_CLUSTER else ERA_GRAPH_DIRNAME
@@ -130,26 +100,10 @@ def main(argv):
                     final_pred(strat_dir)
                     validation_score(strat_dir)
                     continue
-                if op == 'train':
-                    generate_models(stra, l)
-                    continue
 
                 if op == 'upload':
                     upload_results(strat_dir, l)
                     break
-
-                print("layer: ", l)
-                if l == 'fst':
-                    if op == 'split_data':
-                        if stra == STRAT_CLUSTER:
-                            clustering(strat_dir)
-                        split_data_clusters(strat_dir)
-                        continue
-
-                elif l == 'snd':
-                    if op == 'split_data':
-                        snd_layer_training_data(stra)
-                        continue
 
     print("--- %s seconds ---" % (time.time() - start_time))
 

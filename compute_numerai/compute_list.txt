@@ -1,16 +1,4 @@
 requirements_compute.txt
 
-../data_subsets_036_compute
-../model_fst_layer_predict_tournament.py
-../model_snd_layer_predict_tournament.py
-../model_itf.py
-../model_abstract.py
-../random_forest_model.py
-../xgboost_model.py
-../neural_net_model.py
-../reader_csv.py
-../k_nn_model.py
-../pool_map.py
-../prediction_operator.py
-../upload_results.py
-../final_prediction.py
+../data_clusters_compute
+../src_docker

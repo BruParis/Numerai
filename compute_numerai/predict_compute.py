@@ -1,5 +1,6 @@
 # import numerox as nx
 import os
+import errno
 import numerapi
 
 print("START predict.py")
@@ -12,18 +13,29 @@ napi.download_current_dataset(unzip=False, dest_filename='current_dataset.zip')
 
 print("DOWNLOAD FINISHED")
 
-os.system("unzip -p current_dataset.zip numerai_tournament_data.csv > numerai_tournament_data.csv")
+try:
+    os.makedirs('data')
+except OSError as e:
+    if e.errno != errno.EEXIST:
+        print("Error with : make dir data")
+        exit(1)
+
+os.system("unzip -p current_dataset.zip numerai_tournament_data.csv > data/numerai_tournament_data.csv")
 
 os.system("rm current_dataset.zip")
 
-os.system("python model_fst_layer_predict_tournament.py")
+os.system("python src/main.py fst cluster set_h5")
 
-os.system("python model_snd_layer_predict_tournament.py")
+os.system("python src/main.py fst cluster prediction")
 
-os.system("python final_prediction.py")
+os.system("python src/main.py snd cluster prediction")
 
-os.system("python upload_results.py")
+os.system("python src/main.py snd cluster final_prediction")
 
-os.system("rm *.csv")
-os.system("rm data_subsets_036/*.csv")
-os.system("rm data_subsets_036/snd_layer/*.csv")
+os.system("python src/main.py snd cluster upload")
+
+os.system("rm data/*.csv")
+os.system("rm data/*.h5")
+os.system("rm data_clusters/pred*.csv")
+os.system("rm data_clusters/final*.csv")
+os.system("rm data_clusters/snd_layer/*.csv")
