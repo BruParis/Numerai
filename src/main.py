@@ -1,5 +1,6 @@
 import argparse
 import sys
+import time
 from collections import deque
 
 from common import *
@@ -7,9 +8,10 @@ from corr_analysis import feature_era_corr
 from clustering import clustering
 from data_instruments import split_data_clusters, snd_layer_training_data
 from models import generate_models
+from reader import set_h5_stores
 from prediction import make_prediction, final_pred, validation_score
 
-ALL_OPERATIONS = ['ft_era_corr', 'split_data', 'train',
+ALL_OPERATIONS = ['set_h5', 'ft_era_corr', 'split_data', 'train',
                   'prediction', 'final_prediction', 'upload']
 
 
@@ -24,6 +26,10 @@ def print_funct_calls(layers, strategies, operations_q):
 
         if op == 'upload':
             break
+
+        if op == 'set_h5':
+            print('   --> set_h5_stores')
+            continue
 
         for stra in s_aux:
             print(" strat: ", stra)
@@ -82,7 +88,6 @@ def main(argv):
                             help="<operation> to realize",
                             nargs='*',
                             default=['prediction'])
-    # ['ft_era_corr', 'split_data', 'train', 'preditction', 'final_prediction', 'upload']
 
     # arg_parser.add_argument("-f", "--full", action='store_true',
     #                    help="use full dataset")
@@ -99,6 +104,8 @@ def main(argv):
 
     print_funct_calls(layers, strategies, operations_q)
 
+    start_time = time.time()
+
     while 0 < len(operations_q):
         op = operations_q.popleft()
         print("op: ", op)
@@ -106,8 +113,12 @@ def main(argv):
         if op == 'upload':
             break
 
-        if op == 'convert':
-            # h5_convert()
+        if op == 'set_h5':
+            set_h5_stores()
+            continue
+
+        if op == 'ft_era_corr':
+            feature_era_corr(TRAINING_DATA_FP, TRAINING_STORE_H5_FP)
             continue
 
         for stra in strategies:
@@ -127,9 +138,6 @@ def main(argv):
 
                 print("layer: ", l)
                 if l == 'fst':
-                    if op == 'ft_era_corr':
-                        feature_era_corr(TRAINING_DATA_FP)
-                        continue
                     if op == 'split_data':
                         if stra == STRAT_CLUSTER:
                             clustering(strat_dir)
@@ -140,9 +148,8 @@ def main(argv):
                     if op == 'split_data':
                         snd_layer_training_data(stra)
                         continue
-                    elif op == 'train':
-                        generate_models(stra, l)
-                        continue
+
+    print("--- %s seconds ---" % (time.time() - start_time))
 
     # while 0 < len(operations_q):
     #     op = operations_q.popleft()

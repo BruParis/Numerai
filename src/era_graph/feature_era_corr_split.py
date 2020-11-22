@@ -1,4 +1,5 @@
 from reader_csv import ReaderCSV
+from common import *
 from collections import defaultdict
 import numpy as np
 import pandas as pd

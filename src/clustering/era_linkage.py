@@ -15,8 +15,10 @@ class EraLinkage():
             print('Wrong number for era_2: ', era_2)
             return None
 
-        era_1_target_corr = self.eras_target_corr_df.loc[era_1].abs()
-        era_2_target_corr = self.eras_target_corr_df.loc[era_2].abs()
+        era_1_target_corr = self.eras_target_corr_df.loc['era' + str(
+            era_1)].abs()
+        era_2_target_corr = self.eras_target_corr_df.loc['era' + str(
+            era_2)].abs()
 
         # CHOICE
         # Use product as measure of score & proximity between eras
@@ -28,7 +30,7 @@ class EraLinkage():
         # fts_score = abs(era_1_target_corr - era_2_target_corr)
 
         self.era_i_j_ft_score[era_1-1][era_2-1] = fts_score
-        #self.era_i_j_ft_score[era_1-1][era_2-1] = fts_score.sum()
+        # self.era_i_j_ft_score[era_1-1][era_2-1] = fts_score.sum()
         self.era_score_mat[era_1-1, era_2-1] = fts_score.sum()
         # ft_cross_corr = np.linalg.norm(era_i_t_corr - era_j_t_corr)
 
@@ -48,7 +50,9 @@ class EraLinkage():
 
     def __init__(self, eras_target_corr_df, data_type=np.float32):
 
-        self.eras = eras_target_corr_df.index
+        self.eras = [int(era.replace('era', ''))
+                     for era in eras_target_corr_df.index]
+
         self.eras_target_corr_df = eras_target_corr_df
         self.era_score_mat = scipy.zeros([len(self.eras), len(self.eras)])
         self.era_score_reordered_mat = scipy.zeros(
@@ -67,9 +71,8 @@ class EraLinkage():
         # Z = linkage(era_corr_t_corr, 'ward')
         self.linkage = linkage(self.era_score_mat, 'centroid')
         self.dend_idx = dendrogram(self.linkage)['leaves']
-        eras_1 = self.eras - 1
         self.era_to_dend_idx = [self._find_fst_idx_value(
-            self.dend_idx, e_idx) for e_idx in eras_1]
+            self.dend_idx, e_idx-1) for e_idx in self.eras]
         self.era_score_reordered_mat = self.era_score_mat.copy()
         self.era_score_reordered_mat = self.era_score_reordered_mat[:, self.dend_idx]
         self.era_score_reordered_mat = self.era_score_reordered_mat[self.dend_idx, :]

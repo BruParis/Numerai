@@ -2,6 +2,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 import sklearn.metrics as sm
 import pandas as pd
+from common import *
 import numpy as np
 import pickle
 import json
@@ -65,10 +66,19 @@ class RFModel(Model):
                                             warm_start=True,
                                             random_state=0)
 
+        # TODO : imbalanced dataset
+        # scale_pos_weihgt, class weights?
+        class_weight_dict = {cl: 1/w for cl, w in list(
+            zip(TARGET_CLASSES, CLASS_WEIGHT))}
+        sample_weights = [(class_weight_dict[str(t)])
+                          for t in train_data[TARGET_LABEL].values]
+
         train_input, train_target = self._format_input_target(train_data)
 
         self.n_features = len(train_input.columns)
-        self.model.fit(train_input, train_target.values.ravel())
+
+        self.model.fit(train_input, train_target.values.ravel(),
+                       sample_weight=sample_weights)
 
     def predict(self, data_input):
         prediction = self.model.predict(data_input)

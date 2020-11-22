@@ -3,7 +3,6 @@ from .feature_selection import feature_selection
 from common import *
 from reader import ReaderCSV
 from models import ModelConstitution
-from corr_analysis import get_eras_min_corr
 
 import os
 import errno
@@ -33,7 +32,7 @@ def plot_mat(data):
     plt.show()
 
 
-def plot_matrix_clustering(era_l, era_cl_dict, save=False):
+def plot_matrix_clustering(era_l, era_cl_dict, bSave=False, bShow=True):
 
     num_eras, _ = era_l.era_score_mat.shape
 
@@ -68,9 +67,11 @@ def plot_matrix_clustering(era_l, era_cl_dict, save=False):
 
     axcolor = fig.add_axes([0.91, 0.1, 0.02, 0.6])
     pylab.colorbar(im, cax=axcolor)
-    plt.show()
 
-    if save:
+    if bShow:
+        plt.show()
+
+    if bSave:
         fig.savefig(ERA_CL_DIRNAME + '/dendrogram.png')
 
     return
@@ -181,7 +182,7 @@ def aggregate_small_clusters(era_l, cl_dict):
         for cl in del_s_cl:
             del cl_dict[cl]
 
-    #plot_matrix_clustering(era_l, cl_dict, save=True)
+    #plot_matrix_clustering(era_l, cl_dict, bSave=True)
     return cl_dict
 
 
@@ -210,9 +211,11 @@ def eras_clustering(era_l):
         era_l.linkage, criterion='inconsistent', t=criteria)
     era_cl_dict = set_cl_dict(era_l, era_cluster_idx)
 
-    #plot_matrix_clustering(era_l, era_cl_dict, save=True)
+    #plot_matrix_clustering(era_l, era_cl_dict, bSave=True)
 
     full_era_cl_dict = aggregate_small_clusters(era_l, era_cl_dict)
+
+    plot_matrix_clustering(era_l, era_cl_dict, bSave=True, bShow=False)
 
     return full_era_cl_dict
 
@@ -241,7 +244,6 @@ def make_cl_dir():
     if not bDirAlready:
         cl_c_filename = ERA_CL_DIRNAME + '/model_constitution.json'
         cl_c = ModelConstitution(cl_c_filename)
-        cl_c.orig_data_file = TRAINING_DATA_FP
         cl_c.eras_ft_t_corr_file = ERAS_FT_T_CORR_FP
         cl_c.save()
 
@@ -262,11 +264,6 @@ def clustering(dirname):
     # plot_mat(era_l.era_score_mat)
     era_cl_dict = eras_clustering(era_l)
 
-    file_reader = ReaderCSV(model_c.orig_data_file)
-    data_df = file_reader.read_csv().set_index("id")
-    features = [c for c in data_df if c.startswith("feature")]
-
-    #cluster_ft_selection(era_l, era_cl_dict, data_df)
-    feature_selection(era_l, era_cl_dict, data_df)
+    feature_selection(era_l, era_cl_dict, TRAINING_STORE_H5_FP)
 
     save_clusters(model_c, era_l, era_cl_dict, corr_data_df.index)

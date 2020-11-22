@@ -9,7 +9,9 @@ from .model_abstract import Model, ModelType
 class XGBModel(Model):
 
     def _xgbformat_data(self, data):
-        data = data.drop([ERA_LABEL], axis=1)
+
+        if ERA_LABEL in data.columns:
+            data = data.drop([ERA_LABEL], axis=1)
         res = xgb.DMatrix(data, label=TARGET_VALUES)
 
         return res
@@ -38,9 +40,17 @@ class XGBModel(Model):
                                        max_depth=self.model_params['max_depth'],
                                        learning_rate=self.model_params['learning_rate'],
                                        booster='gbtree',
+                                       scale_pos_weight=SCALE_POS_WEIGHT,
                                        n_jobs=-1)
         # train(..., eval_metric=evals, early_stopping_rounds=10)
         # train_data_format = self._xgbformat_data(train_data_pd)
+
+        # TODO : imbalanced dataset
+        # scale_pos_weihgt, class weights?
+        class_weight_dict = {cl: 1/w for cl, w in list(
+            zip(TARGET_CLASSES, CLASS_WEIGHT))}
+        sample_weights = [(class_weight_dict[str(t)])
+                          for t in train_data_pd[TARGET_LABEL].values]
 
         train_input, train_target = self._format_input_target(
             train_data_pd)
@@ -50,7 +60,8 @@ class XGBModel(Model):
         train_target_r = train_target.values.ravel()
 
         print("START TRAINING")
-        self.model.fit(train_input, train_target_r)
+        self.model.fit(train_input, train_target_r,
+                       sample_weight=sample_weights)
 
         print("DONE")
 

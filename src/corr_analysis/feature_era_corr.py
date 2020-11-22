@@ -5,7 +5,7 @@ import os
 import errno
 import matplotlib.pyplot as plt
 
-from reader import ReaderCSV
+from reader import ReaderCSV, load_h5_eras
 from models import ModelConstitution
 from common import *
 
@@ -33,22 +33,22 @@ def ft_target_corr(data_df, features):
     return ft_t_corr
 
 
-def feature_corr_target(data_df, eras, feature):
+def get_eras_corr(data_fp, eras, features):
 
-    by_era_correlation = pd.Series({
-        era: np.corrcoef(data_df[TARGET_LABEL],
-                         data_df[feature])[0, 1]
-        for era, data_df in data_df.groupby(eras)
-    }, name=feature)
+    data_l = []
+    column_l = ['era'] + features
+    for era in eras:
+        data_df = load_h5_eras(data_fp, [era])
 
-    return by_era_correlation
+        era_ft_corr = [np.corrcoef(data_df[TARGET_LABEL], data_df[ft])[0, 1]
+                       for ft in features]
 
+        row_era_corr = [era] + era_ft_corr
+        data_l.append(row_era_corr)
 
-def get_eras_min_corr(data_df, eras, ft):
-    print("ft: ", ft)
-    era_corr = feature_corr_target(data_df, eras, ft)
+    res = pd.DataFrame(data_l, columns=column_l).set_index('era')
 
-    return era_corr
+    return res
 
 
 def ft_simi(fts1, fts2):
@@ -60,22 +60,23 @@ def export_eras_ft_filter(dict_data, filepath):
         json.dump(dict_data, fp)
 
 
-def feature_era_corr(data_filename):
+def feature_era_corr(data_csv, data_h5):
 
-    file_reader = ReaderCSV(data_filename)
+    # remove useless read for features, once h5 contains 'features' table
+    # just like eras
+    file_reader = ReaderCSV(data_csv)
     data_df = file_reader.read_csv().set_index("id")
+
+    # fts = pd.read_hdf(data_filename, 'features')
 
     features = [c for c in data_df if c.startswith("feature")]
 
-    data_df["erano"] = data_df.era.str.slice(3).astype(int)
-    eras = data_df.erano
+    # data_df["erano"] = data_df.era.str.slice(3).astype(int)
+    # eras = data_df.erano
+    eras = pd.read_hdf(data_h5, H5_ERAS).tolist()
+    print("eras: ", eras)
 
-    eras_ft_target_corr = [get_eras_min_corr(
-        data_df, eras, ft) for ft in features]
+    eras_ft_target_corr = get_eras_corr(data_h5, eras, features)
+    print("eras_ft_target_corr: ", eras_ft_target_corr)
 
-    eras_ft_target_corr_df = pd.concat(
-        eras_ft_target_corr, axis=1, keys=[s.name for s in eras_ft_target_corr])
-    print("eras_ft_target_corr_df: ", eras_ft_target_corr_df)
-    eras_ft_target_corr_df.index.names = ['era']
-
-    eras_ft_target_corr_df.to_csv(ERAS_FT_T_CORR_FP, index=True)
+    eras_ft_target_corr.to_csv(ERAS_FT_T_CORR_FP, index=True)

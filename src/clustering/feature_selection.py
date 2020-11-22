@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from corr_analysis import ft_target_corr
+from reader import load_h5_eras
 
 # CHOICE
 CL_THRESHOLD_FT_T_CORR = 0.33
@@ -20,7 +21,7 @@ def plot_fts_score_t_corr(fts_scores_df, ft_t_corr):
     plt.show()
 
 
-def feature_selection(era_l, cl_dict, data_df):
+def feature_selection(era_l, cl_dict, data_fp):
 
     for _, cl_caract in cl_dict.items():
         cl_fts_scores = [era_l.era_i_j_ft_score[era_i][era_j]
@@ -43,8 +44,9 @@ def feature_selection(era_l, cl_dict, data_df):
             ascending=False)
 
         # need to calculate corr for span of eras in cluster
-        data_cl_eras_df = data_df.loc[data_df['era'].isin(
-            cl_caract['eras_name'])]
+        data_cl_eras_df = load_h5_eras(data_fp, cl_caract['eras_name'])
+        # data_cl_eras_df = data_df.loc[data_df['era'].isin(
+        #    cl_caract['eras_name'])]
         era_ft_t_corr = ft_target_corr(
             data_cl_eras_df, cl_fts_full_scores_df.index.tolist()).abs()
         #plot_fts_score_t_corr(cl_fts_full_scores_df, era_ft_t_corr)

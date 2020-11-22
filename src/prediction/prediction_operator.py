@@ -102,8 +102,11 @@ class PredictionOperator():
         # CHOICE
         # Need to check best formula for era (sub)datasets similarity
         # / len (sub_ft) or len(sub_ft) ** 2 ?
+
         cl_corr_diff = (cl_ft_corr - cluster['corr_mat'].values)
         cl_corr_dist = (cl_corr_diff / len(cl_ft)) ** 2
+
+        #print("cl_corr_dist: ", cl_corr_dist)
 
         cl_score = math.sqrt(cl_corr_dist.values.sum())
         # ==========================

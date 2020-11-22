@@ -142,9 +142,9 @@ def cl_model_build(dirname, cl_dirname, bSaveModel=False, bMetrics=False, model_
     # model_types = ModelType
     # model_types = [ModelType.K_NN]
     # model_types = [ModelType.RandomForest]
-    model_types = [ModelType.NeuralNetwork]
-    # model_types = [ModelType.XGBoost, ModelType.RandomForest,
-    #                ModelType.NeuralNetwork]  # , ModelType.K_NN]
+    # model_types = [ModelType.NeuralNetwork]
+    model_types = [ModelType.XGBoost, ModelType.RandomForest,
+                   ModelType.NeuralNetwork]  # , ModelType.K_NN]
 
     model_generator = ModelGenerator(cl_dirpath)
 
@@ -315,7 +315,7 @@ def generate_models(strat, layer):
     # cl_dirname_l = [cl_dirname_l[0]]  # DEBUG
     print("cl_dirname_l: ", cl_dirname_l)
 
-    bDebug = False
+    bDebug = True
     bMetrics = True
     bSaveModel = True
 

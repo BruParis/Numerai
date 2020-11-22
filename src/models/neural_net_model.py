@@ -141,6 +141,37 @@ class NeuralNetwork(Model):
         Model.__init__(self, ModelType.NeuralNetwork,
                        dirname, model_params, debug, filename)
 
+    def oversampling(self, train_data):
+        # TODO : balance classes
+        sampling_dict = {
+            t: len(train_data.loc[train_data[TARGET_LABEL] == t].index) for t in TARGET_VALUES}
+        print("sampling_dict: ", sampling_dict)
+        max_class = max(sampling_dict, key=sampling_dict.get)
+        print("max_class: ", max_class)
+        supp_fact_dict = {k: (sampling_dict[max_class] - sampling_dict[k]) /
+                          sampling_dict[k] for k, v in sampling_dict.items()}
+        print("supp_fact_dict: ", supp_fact_dict)
+
+        supp_train_data = pd.DataFrame()
+        for t, supp_f in supp_fact_dict.items():
+            class_train_data = train_data.loc[train_data[TARGET_LABEL] == t]
+            supp_f_floor = int(supp_f)
+            supp_f_deci = supp_f - supp_f_floor
+
+            for _ in range(supp_f_floor):
+                supp_train_data = pd.concat(
+                    [supp_train_data, class_train_data], axis=0)
+
+            num_last_samples = int(supp_f_deci * len(class_train_data.index))
+            supp_train_data = pd.concat(
+                [supp_train_data, class_train_data.sample(num_last_samples)], axis=0)
+
+        res = pd.concat([supp_train_data, train_data], axis=0)
+        res_sampling_dict = {
+            t: len(res.loc[res[TARGET_LABEL] == t].index) for t in TARGET_VALUES}
+        print("sampling_dict: ", res_sampling_dict)
+        return res
+
     def build_model(self, train_data):
         if train_data is None:
             print("No train data provided!")
@@ -149,7 +180,10 @@ class NeuralNetwork(Model):
         if self.debug:
             print("model params: ", self.model_params)
 
-        train_input, train_target = self._format_input_target(train_data)
+        balanced_train_data = self.oversampling(train_data)
+
+        train_input, train_target = self._format_input_target(
+            balanced_train_data)
         packed_train_ds = self._pack_input_target_ds(
             train_input, train_target, BATCH_SIZE_TRAIN)
 
@@ -172,7 +206,8 @@ class NeuralNetwork(Model):
         #                                                  save_weights_only=True)
 
         # , callbacks=[cp_callback])
-        self.model.fit(packed_train_ds, epochs=20)
+        # CHOICE epochs 20 ? 30 ?
+        self.model.fit(packed_train_ds, epochs=30)
 
     def evaluate_model(self, test_data):
         test_input, test_target = self._format_input_target(test_data)

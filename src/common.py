@@ -9,13 +9,17 @@ STRAT_CLUSTER = 'cluster'
 STRAT_ERA_GRAPH = 'era_graph'
 
 TRAINING_DATA_FP = DATA_DIRNAME + '/numerai_training_data.csv'
+TRAINING_STORE_H5_FP = DATA_DIRNAME + '/training_store.h5'
 ERA_LABEL = 'era'
 
 TOURNAMENT_NAME = 'kazutsugi'
 PREDICTION_NAME = 'prediction_kazutsugi'
-TARGET_LABEL = f"target_{TOURNAMENT_NAME}"
+#TARGET_LABEL = f"target_{TOURNAMENT_NAME}"
+TARGET_LABEL = "target"
 TARGET_VALUES = [0.0, 0.25, 0.5, 0.75, 1.0]
 TARGET_CLASSES = ['0.0', '0.25', '0.5', '0.75', '1.0']
+CLASS_WEIGHT = [0.04, 0.19, 0.5, 0.19, 0.04]
+SCALE_POS_WEIGHT = 2
 TARGET_FACT_NUMERIC = 4
 CORR_THRESHOLD = 0.036
 COL_PROBA_NAMES = ['proba_0.0', 'proba_0.25',
@@ -41,6 +45,7 @@ CL_NUMERAI_TR_DATA_FP = 'numerai_training_data.csv'
 SND_LAYER_FILENAME = 'snd_layer_training_data.csv'
 
 TOURNAMENT_DATA_FP = DATA_DIRNAME + '/numerai_tournament_data.csv'
+TOURNAMENT_STORE_H5_FP = DATA_DIRNAME + '/tournament_store.h5'
 PREDICTIONS_FILENAME = 'predictions_tournament_'
 FINAL_PREDICT_FILENAME = 'final_predict_'
 FINAL_PRED_VALID_FILENAME = 'final_predict_validation_'
@@ -48,3 +53,6 @@ PRED_FST_SUFFIX = '_fst_layer.csv'
 PRED_SND_SUFFIX = '_snd_layer.csv'
 
 PREDICTION_TYPES = ['validation', 'test', 'live']
+
+H5_ERAS = 'eras'
+H5_FT = 'features'

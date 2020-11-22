@@ -7,7 +7,7 @@ import time
 
 from common import *
 from threadpool import pool_map
-from reader import ReaderCSV
+from reader import ReaderCSV, load_h5_eras
 from models import ModelType, model_itf, ModelConstitution
 from prediction import PredictionOperator
 
@@ -59,19 +59,20 @@ def load_matching_data(data_filepath, era_target):
 
 
 def make_prediction_fst(strat, strat_dir, data_types_fp, eras_type_df, model_types):
-    prediction_descr = {}
+    pred_descr = {}
     file_w_header = {d_t: True for d_t, _ in data_types_fp}
+
     for data_t, fpath in data_types_fp:
 
         eras_df = eras_type_df.loc[eras_type_df['data_type'] == data_t]
         eras_list = eras_df['era'].drop_duplicates().values
-        print("eras_df: ", eras_list)
 
         for era_b in list_chunks(eras_list):
 
             start_time = time.time()
             print("prediction for era batch: ", era_b)
-            input_data = load_input_data(era_b)
+            #input_data = load_input_data(era_b)
+            input_data = load_h5_eras(TOURNAMENT_STORE_H5_FP, era_b)
             print("--- %s seconds ---" % (time.time() - start_time))
 
             for era in era_b:
@@ -94,7 +95,8 @@ def make_prediction_fst(strat, strat_dir, data_types_fp, eras_type_df, model_typ
                     [pred_data, input_type_data['era']], axis=1)
 
                 if file_w_header[data_t]:
-                    prediction_descr[data_t] = pred_data.columns.values.tolist()
+                    pred_descr[data_t] = pred_data.columns.values.tolist(
+                    )
 
                 write_mode = 'w' if file_w_header[data_t] else 'a'
                 with open(fpath, write_mode) as f:
@@ -102,11 +104,11 @@ def make_prediction_fst(strat, strat_dir, data_types_fp, eras_type_df, model_typ
                         f, header=file_w_header[data_t], index=True)
                     file_w_header[data_t] = False
 
-    return prediction_descr
+    return pred_descr
 
 
 def make_prediction_snd(strat, strat_dir, data_types_fp, model_types):
-    prediction_descr = {}
+    pred_descr = {}
 
     for data_type, fst_layer_path, snd_layer_path in data_types_fp:
 
@@ -129,12 +131,12 @@ def make_prediction_snd(strat, strat_dir, data_types_fp, model_types):
         snd_layer_pred_data = pd.concat(
             [snd_layer_pred_data, fst_layer_data['era']], axis=1)
 
-        prediction_descr[data_type] = snd_layer_pred_data.columns.values.tolist()
+        pred_descr[data_type] = snd_layer_pred_data.columns.values.tolist()
 
         with open(snd_layer_path, 'w') as f:
             snd_layer_pred_data.to_csv(f, index=True)
 
-    return prediction_descr
+    return pred_descr
 
 
 def make_prediction(strat, layer, data_types):
@@ -157,7 +159,9 @@ def make_prediction(strat, layer, data_types):
     start_time = time.time()
     eras_type_df = load_eras_data_type()
     print("--- %s seconds ---" % (time.time() - start_time))
-    model_types_fst = [ModelType.NeuralNetwork]
+    #model_types_fst = [ModelType.NeuralNetwork]
+    model_types_fst = [ModelType.XGBoost, ModelType.RandomForest,
+                       ModelType.NeuralNetwork]
 
     if layer == 'fst':
         pred_descr = make_prediction_fst(

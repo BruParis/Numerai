@@ -35,7 +35,8 @@ class Model(ABC):
     def _format_input_target(self, data_df):
 
         # if self.model_type is not ModelType.XGBoost:
-        data_df = data_df.drop([ERA_LABEL], axis=1)
+        if ERA_LABEL in data_df.columns: 
+            data_df = data_df.drop([ERA_LABEL], axis=1)
 
         input_df = data_df.drop([TARGET_LABEL], axis=1)
         target_df = data_df.loc[:, [TARGET_LABEL]]
