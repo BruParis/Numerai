@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 from reader import ReaderCSV
 from common import *
 
@@ -54,6 +55,12 @@ def set_h5_stores():
     csv_h5_f = list(zip(csv_files, h5_files))
 
     for csv_f, h5_f in csv_h5_f:
+
+        try:
+            f = open(csv_f)
+        except IOError:
+            print("File : ", csv_f, " not accessible")
+            continue
 
         reader = ReaderCSV(csv_f)
         if csv_f == TRAINING_DATA_FP:

@@ -205,17 +205,28 @@ def eras_clustering(era_l):
     #         era_cluster_idx, cl) for cl in clusters}
     #     plot_matrix_clustering(era_l, era_cl_dict)
 
+    # criteria_l = np.linspace(start=0.05, stop=1.95, num=20)
+    # for cr in criteria_l:
+    #     print("cr: ", cr)
+    #     era_cluster_idx = fcluster(
+    #         era_l.linkage, criterion='inconsistent', t=cr)
+    #     era_cl_dict = set_cl_dict(era_l, era_cluster_idx)
+    #     plot_matrix_clustering(era_l, era_cl_dict)
+    # exit(0)
+
     criteria = 0.95
     # criteria = 0.45
     era_cluster_idx = fcluster(
         era_l.linkage, criterion='inconsistent', t=criteria)
     era_cl_dict = set_cl_dict(era_l, era_cluster_idx)
 
-    #plot_matrix_clustering(era_l, era_cl_dict, bSave=True)
+    plot_matrix_clustering(era_l, era_cl_dict, bSave=True)
 
     full_era_cl_dict = aggregate_small_clusters(era_l, era_cl_dict)
 
-    plot_matrix_clustering(era_l, era_cl_dict, bSave=True, bShow=False)
+    #plot_matrix_clustering(era_l, full_era_cl_dict, bSave=True, bShow=False)
+    plot_matrix_clustering(era_l, full_era_cl_dict, bSave=False, bShow=True)
+    exit(0)
 
     return full_era_cl_dict
 

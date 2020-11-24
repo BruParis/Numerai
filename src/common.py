@@ -33,7 +33,7 @@ TEST_RATIO = 0.20
 ERAS_FT_T_CORR_FP = DATA_DIRNAME + '/eras_ft_target_corr.csv'
 
 # clustering
-MIN_NUM_ERAS = 6
+MIN_NUM_ERAS = 5
 # MIN_NUM_ERAS = 3
 MODEL_CONSTITUTION_FILENAME = 'model_constitution.json'
 ERA_CROSS_SCORE_FP = ERA_CL_DIRNAME + '/era_cross_score.csv'
@@ -61,3 +61,5 @@ H5_FT = 'features'
 
 NUMERAI_PRED_FILENAME = "numerai_prediction.csv"
 PREDICT_LABEL = 'prediction'
+
+COMPUTE_BOOL = False

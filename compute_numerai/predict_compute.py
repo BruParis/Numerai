@@ -24,8 +24,6 @@ os.system("unzip -p current_dataset.zip numerai_tournament_data.csv > data/numer
 
 os.system("rm current_dataset.zip")
 
-os.system("python src/main.py fst cluster set_h5")
-
 os.system("python src/main.py fst cluster prediction")
 
 os.system("python src/main.py snd cluster prediction")
@@ -35,7 +33,6 @@ os.system("python src/main.py snd cluster final_prediction")
 os.system("python src/main.py snd cluster upload")
 
 os.system("rm data/*.csv")
-os.system("rm data/*.h5")
 os.system("rm data_clusters/pred*.csv")
 os.system("rm data_clusters/final*.csv")
 os.system("rm data_clusters/snd_layer/*.csv")

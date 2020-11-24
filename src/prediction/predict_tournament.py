@@ -71,8 +71,10 @@ def make_prediction_fst(strat, strat_dir, data_types_fp, eras_type_df, model_typ
 
             start_time = time.time()
             print("prediction for era batch: ", era_b)
-            #input_data = load_input_data(era_b)
-            input_data = load_h5_eras(TOURNAMENT_STORE_H5_FP, era_b)
+            if COMPUTE_BOOL:
+                input_data = load_input_data(era_b)
+            else:
+                input_data = load_h5_eras(TOURNAMENT_STORE_H5_FP, era_b)
             print("--- %s seconds ---" % (time.time() - start_time))
 
             for era in era_b:

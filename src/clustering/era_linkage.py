@@ -67,8 +67,8 @@ class EraLinkage():
     def compute_eras_linkage(self):
         # CHOICE
         # linkage method: singlen, ward, centroid ?
-        # Z = linkage(era_corr_t_corr, 'single')
-        # Z = linkage(era_corr_t_corr, 'ward')
+        # self.linkage = linkage(self.era_score_mat, 'single')
+        # self.linkage = linkage(self.era_score_mat, 'ward')
         self.linkage = linkage(self.era_score_mat, 'centroid')
         self.dend_idx = dendrogram(self.linkage)['leaves']
         self.era_to_dend_idx = [self._find_fst_idx_value(
