@@ -24,7 +24,6 @@ TARGET_FACT_NUMERIC = 4
 CORR_THRESHOLD = 0.036
 COL_PROBA_NAMES = ['proba_0.0', 'proba_0.25',
                    'proba_0.5', 'proba_0.75', 'proba_1.0']
-LAYER_PRED_SUFFIX = {1: '_fst', 2: '_snd'}
 
 FST_LAYER_TRAIN_RATIO = 0.20
 TEST_RATIO = 0.20
@@ -42,19 +41,27 @@ DATA_LAYER_FILENAME = 'numerai_training_data_layer.csv'
 FST_LAYER_DISTRIB_FILENAME = 'numerai_training_data_layer.csv'
 CL_NUMERAI_TR_DATA_FP = 'numerai_training_data.csv'
 
+FST_LAYER = 'fst_layer'
+SND_LAYER = 'snd_layer'
+LAYER_PRED_SUFFIX = {FST_LAYER: '_fst.csv', SND_LAYER: '_snd.csv'}
+
 SND_LAYER_FILENAME = 'snd_layer_training_data.csv'
 
 TOURNAMENT_DATA_FP = DATA_DIRNAME + '/numerai_tournament_data.csv'
 TOURNAMENT_STORE_H5_FP = DATA_DIRNAME + '/tournament_store.h5'
 PREDICTIONS_FILENAME = 'predictions_tournament_'
 FINAL_PREDICT_FILENAME = 'final_predict_'
-FINAL_PRED_VALID_FILENAME = 'final_predict_validation_'
-FINAL_PRED_LIVE_FILENAME = 'final_predict_live_'
-FINAL_PRED_TEST_FILENAME = 'final_predict_test_'
-PRED_FST_SUFFIX = '_fst_layer.csv'
-PRED_SND_SUFFIX = '_snd_layer.csv'
+FINAL_PRED_VALID_FILENAME = 'final_predict_validation'
+FINAL_PRED_LIVE_FILENAME = 'final_predict_live'
+FINAL_PRED_TEST_FILENAME = 'final_predict_test'
+PRED_FST_SUFFIX = '_fst.csv'
+PRED_SND_SUFFIX = '_snd.csv'
 
-PREDICTION_TYPES = ['validation', 'test', 'live']
+TRAINING_TYPE = 'training'
+VALID_TYPE = 'validation'
+TEST_TYPE = 'test'
+LIVE_TYPE = 'live'
+PREDICTION_TYPES = [VALID_TYPE, TEST_TYPE, LIVE_TYPE]
 
 H5_ERAS = 'eras'
 H5_FT = 'features'

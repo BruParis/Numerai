@@ -104,35 +104,32 @@ def pred_type_score(validation_data, pred_name):
     return res
 
 
-def validation_score(strat_dir):
+def validation_score(strat_dir, l):
 
-    layer = ['fst_layer', 'snd_layer']
+    layer = FST_LAYER if l == 'fst' else SND_LAYER
 
     model_c_fp = strat_dir + '/' + MODEL_CONSTITUTION_FILENAME
     model_c = load_json(model_c_fp)
 
-    valid_pred_fp = {'full': strat_dir + '/' + FINAL_PRED_VALID_FILENAME + 'full.csv',
-                     'fst_layer': strat_dir + '/' + FINAL_PRED_VALID_FILENAME + 'fst.csv',
-                     'snd_layer': strat_dir + '/' + FINAL_PRED_VALID_FILENAME + 'snd.csv'}
+    valid_pred_fp = strat_dir + '/' + \
+        FINAL_PRED_VALID_FILENAME + LAYER_PRED_SUFFIX[layer]
 
     model_c_pred = model_c['predictions']
-    for l in layer:
-        layer_pred_fp = valid_pred_fp[l]
 
-        pred_types = model_c_pred[l]['models_final'] + \
-            ['arithmetic_mean']
+    pred_types = model_c_pred[layer]['models_final'] + ['arithmetic_mean']
 
-        # Check the per-era correlations on the validation set
-        validation_data = load_validation_data()
-        pred_data = load_validation_prediction(layer_pred_fp)
+    # Check the per-era correlations on the validation set
+    validation_data = load_validation_data()
+    print("valid_pred_fp: ", valid_pred_fp)
+    pred_data = load_validation_prediction(valid_pred_fp)
 
-        validation_data = pd.concat(
-            [validation_data, pred_data], axis=1)
+    validation_data = pd.concat(
+        [validation_data, pred_data], axis=1)
 
-        pred_scores = {pred_name: pred_type_score(
-            validation_data, pred_name) for pred_name in pred_types}
+    pred_scores = {pred_name: pred_type_score(
+        validation_data, pred_name) for pred_name in pred_types}
 
-        model_c_pred[l]['pred_scores'] = pred_scores
+    model_c_pred[layer]['pred_scores'] = pred_scores
 
-        with open(model_c_fp, 'w') as fp:
-            json.dump(model_c, fp, indent=4)
+    with open(model_c_fp, 'w') as fp:
+        json.dump(model_c, fp, indent=4)

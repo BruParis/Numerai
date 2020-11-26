@@ -1,14 +1,11 @@
 import os
 import json
-import math
 import pandas as pd
-import numpy as np
 import time
 
 from common import *
-from threadpool import pool_map
 from reader import ReaderCSV, load_h5_eras
-from models import ModelType, model_itf, ModelConstitution
+from models import ModelType, ModelConstitution
 from prediction import PredictionOperator
 
 ERA_BATCH_SIZE = 32
@@ -50,15 +47,7 @@ def list_chunks(lst):
         yield lst[i:i + ERA_BATCH_SIZE]
 
 
-def load_matching_data(data_filepath, era_target):
-    file_reader = ReaderCSV(data_filepath)
-    input_data = file_reader.read_csv_matching(
-        'era', era_target).set_index('id')
-
-    return input_data
-
-
-def make_prediction_fst(strat, strat_dir, data_types_fp, eras_type_df, model_types):
+def make_prediction_fst(strat, strat_dir, model_dict, data_types_fp, eras_type_df, model_types):
     pred_descr = {}
     file_w_header = {d_t: True for d_t, _ in data_types_fp}
 
@@ -67,49 +56,48 @@ def make_prediction_fst(strat, strat_dir, data_types_fp, eras_type_df, model_typ
         eras_df = eras_type_df.loc[eras_type_df['data_type'] == data_t]
         eras_list = eras_df['era'].drop_duplicates().values
 
-        for era_b in list_chunks(eras_list):
+        eras_batches = list_chunks(
+            eras_list) if data_t is not VALID_TYPE else [eras_list]
+
+        for era_b in eras_batches:
 
             start_time = time.time()
             print("prediction for era batch: ", era_b)
+
             if COMPUTE_BOOL:
                 input_data = load_input_data(era_b)
             else:
                 input_data = load_h5_eras(TOURNAMENT_STORE_H5_FP, era_b)
             print("--- %s seconds ---" % (time.time() - start_time))
 
-            for era in era_b:
-                print("era: ", era)
-                input_data_era = input_data.loc[input_data['era'] == era]
-                input_type_data = input_data_era.loc[input_data_era['data_type'] == data_t]
+            input_data_era = input_data.loc[input_data['era'].isin(era_b)]
+            input_type_data = input_data_era.loc[input_data_era['data_type'] == data_t]
 
-                if input_type_data.empty:
-                    continue
+            if input_type_data.empty:
+                continue
 
-                pred_op = PredictionOperator(
-                    strat, strat_dir, MODEL_CONSTITUTION_FILENAME, model_types, bMultiProcess=True)
+            pred_op = PredictionOperator(
+                strat, strat_dir, model_dict, model_types, data_t, bMultiProcess=False)
 
-                # pred_data = pred_op.make_full_predict(
-                #     input_type_data) if bFull else pred_op.make_fst_layer_predict(input_type_data)
-                pred_data = pred_op.make_fst_layer_predict(input_type_data)
+            pred_data = pred_op.make_fst_layer_predict(input_type_data)
 
-                # stitch eras back
-                pred_data = pd.concat(
-                    [pred_data, input_type_data['era']], axis=1)
+            # stitch eras back
+            pred_data = pd.concat(
+                [pred_data, input_type_data['era']], axis=1)
 
-                if file_w_header[data_t]:
-                    pred_descr[data_t] = pred_data.columns.values.tolist(
-                    )
+            if file_w_header[data_t]:
+                pred_descr[data_t] = pred_data.columns.values.tolist()
 
-                write_mode = 'w' if file_w_header[data_t] else 'a'
-                with open(fpath, write_mode) as f:
-                    pred_data.to_csv(
-                        f, header=file_w_header[data_t], index=True)
-                    file_w_header[data_t] = False
+            write_mode = 'w' if file_w_header[data_t] else 'a'
+            with open(fpath, write_mode) as f:
+                pred_data.to_csv(
+                    f, header=file_w_header[data_t], index=True)
+                file_w_header[data_t] = False
 
     return pred_descr
 
 
-def make_prediction_snd(strat, strat_dir, data_types_fp, model_types):
+def make_prediction_snd(strat, strat_dir, model_dict, data_types_fp, model_types):
     pred_descr = {}
 
     for data_type, fst_layer_path, snd_layer_path in data_types_fp:
@@ -120,12 +108,8 @@ def make_prediction_snd(strat, strat_dir, data_types_fp, model_types):
 
         fst_layer_data = load_data(fst_layer_path)
 
-        print("fst_layer_path: ", fst_layer_path)
-        print("snd_layer_path: ", snd_layer_path)
-        print("fst_layer_data: ", fst_layer_data)
-
         pred_op = PredictionOperator(
-            strat, strat_dir, MODEL_CONSTITUTION_FILENAME, model_types, bMultiProcess=False)
+            strat, strat_dir, model_dict, model_types, data_type, bMultiProcess=True)
 
         snd_layer_pred_data = pred_op.make_full_predict(fst_layer_data)
 
@@ -167,7 +151,7 @@ def make_prediction(strat, layer, data_types):
 
     if layer == 'fst':
         pred_descr = make_prediction_fst(
-            strat, strat_dir, data_types_fst_fp, eras_type_df, model_types_fst)
+            strat, strat_dir, model_dict, data_types_fst_fp, eras_type_df, model_types_fst)
         model_dict['predictions']['fst_layer'] = pred_descr
 
     if layer == 'snd':
@@ -181,7 +165,7 @@ def make_prediction(strat, layer, data_types):
                            ModelType.NeuralNetwork]
 
         pred_descr = make_prediction_snd(
-            strat, strat_dir, data_types_snd_fp, model_types_snd)
+            strat, strat_dir, model_dict, data_types_snd_fp, model_types_snd)
 
         model_dict['predictions']['snd_layer'] = pred_descr
 

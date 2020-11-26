@@ -22,14 +22,13 @@ def load_data(fp):
     return input_data
 
 
-def final_predict_layer(dirname, model_dict_pred, data_types_fp, num_layer):
+def final_predict_layer(dirname, model_dict_pred, data_types_fp, layer):
 
-    if num_layer not in LAYER_PRED_SUFFIX.keys():
-        print("wrong layer number provided")
+    if layer not in LAYER_PRED_SUFFIX.keys():
+        print("wrong layer provided")
         return
 
-    model_dict_k = 'fst_layer' if num_layer == 1 else 'snd_layer'
-    layer_pred_descrb = model_dict_pred[model_dict_k]
+    layer_pred_descrb = model_dict_pred[layer]
     model_types = layer_pred_descrb['models_final']
     print("layer_pred_descrb: ", layer_pred_descrb)
 
@@ -82,14 +81,14 @@ def final_predict_layer(dirname, model_dict_pred, data_types_fp, num_layer):
 
         result_vote['arithmetic_mean'] = arithmetic_mean.idxmax(axis=1)
 
-        pred_suffix = LAYER_PRED_SUFFIX[num_layer]
-        predict_fp = dirname + '/' + FINAL_PREDICT_FILENAME + data_t + pred_suffix + '.csv'
+        pred_suffix = LAYER_PRED_SUFFIX[layer]
+        predict_fp = dirname + '/' + FINAL_PREDICT_FILENAME + data_t + pred_suffix
 
         with open(predict_fp, 'w') as f:
             result_vote.to_csv(f, index=True)
 
 
-def final_pred(strat_dir):
+def final_pred(strat_dir, l):
 
     model_dict_fp = strat_dir + '/' + MODEL_CONSTITUTION_FILENAME
     model_dict = load_json(model_dict_fp)
@@ -98,9 +97,6 @@ def final_pred(strat_dir):
     # model_types = {'fst': {'models': ['xgboost', 'rf', 'neural_net']},
     #                'snd': {'models': ['xgboost', 'rf', 'neural_net']}}
     model_dict_pred = model_dict['predictions']
-    model_dict_pred['fst_layer']['models_final'] = ['neural_net']
-    model_dict_pred['snd_layer']['models_final'] = [
-        'xgboost', 'rf', 'neural_net']
 
     # FULL
     # full_dirname = dirname + '/full'
@@ -114,20 +110,27 @@ def final_pred(strat_dir):
     #                     fulll_data_types_fp, 0)
 
     # FST LAYER
-    predictions_fst_layer_fp = [
-        strat_dir + '/predictions_tournament_' + d_t + '_fst_layer.csv' for d_t in PREDICTION_TYPES]
+    if l == 'fst' or l == 'full':
+        model_dict_pred[FST_LAYER]['models_final'] = ['rf', 'neural_net']
+        predictions_fst_layer_fp = [
+            strat_dir + '/predictions_tournament_' + d_t + '_fst_layer.csv' for d_t in PREDICTION_TYPES]
 
-    fst_layer_data_types_fp = list(
-        zip(PREDICTION_TYPES, predictions_fst_layer_fp))
-    final_predict_layer(strat_dir, model_dict_pred, fst_layer_data_types_fp, 1)
+        fst_layer_data_types_fp = list(
+            zip(PREDICTION_TYPES, predictions_fst_layer_fp))
+        final_predict_layer(strat_dir, model_dict_pred,
+                            fst_layer_data_types_fp, FST_LAYER)
 
     # SND LAYER
-    predictions_snd_layer_fp = [
-        strat_dir + '/predictions_tournament_' + d_t + '_snd_layer.csv' for d_t in PREDICTION_TYPES]
+    if l == 'snd' or l == 'full':
+        model_dict_pred[SND_LAYER]['models_final'] = [
+            'xgboost', 'rf', 'neural_net']
+        predictions_snd_layer_fp = [
+            strat_dir + '/predictions_tournament_' + d_t + '_snd_layer.csv' for d_t in PREDICTION_TYPES]
 
-    snd_layer_data_types_fp = list(
-        zip(PREDICTION_TYPES, predictions_snd_layer_fp))
-    final_predict_layer(strat_dir, model_dict_pred, snd_layer_data_types_fp, 2)
+        snd_layer_data_types_fp = list(
+            zip(PREDICTION_TYPES, predictions_snd_layer_fp))
+        final_predict_layer(strat_dir, model_dict_pred,
+                            snd_layer_data_types_fp, SND_LAYER)
 
     with open(model_dict_fp, 'w') as fp:
         json.dump(model_dict, fp, indent=4)

@@ -148,7 +148,7 @@ def cl_model_build(dirname, cl_dirname, bSaveModel=False, bMetrics=False, model_
 
     model_generator = ModelGenerator(cl_dirpath)
 
-    model_l = []
+    model_l = dict()
     for model_type in model_types:
         for model_prefix in make_model_prefix(model_type):
 
@@ -172,13 +172,16 @@ def cl_model_build(dirname, cl_dirname, bSaveModel=False, bMetrics=False, model_
                     filepath, configpath = model.save_model()
                     model_dict['model_filepath'] = filepath
                     model_dict['config_filepath'] = configpath
-                    model_l.append(model_dict)
+                    model_l[model_type.name] = model_dict
 
     return cl_dirname, model_l
 
 
 def generate_fst_layer_model(dirname, cl_dirname_l, bDebug, bMetrics, bSaveModel,
                              bMultiProc, bSaveModelDict):
+    model_c_filepath = dirname + '/' + MODEL_CONSTITUTION_FILENAME
+    cl_dict = load_json(model_c_filepath)
+
     start_time = time.time()
 
     # Seems there is a pb with multiprocess (mult. proc w/ same dataframe?)
@@ -195,23 +198,15 @@ def generate_fst_layer_model(dirname, cl_dirname_l, bDebug, bMetrics, bSaveModel
             _, model_dict_cl_l = cl_model_build(
                 dirname, cl_dir, bSaveModel, bMetrics, bDebug)
 
-            model_dict_l[cl_dir] = model_dict_cl_l
+            cl_dict["clusters"][cl_dir]['models'] = model_dict_cl_l
 
     print("model building done")
     print("--- %s seconds ---" % (time.time() - start_time))
 
     if bSaveModel or bSaveModelDict:
-        model_c_filepath = dirname + '/' + MODEL_CONSTITUTION_FILENAME
-
-        cl_dict = load_json(model_c_filepath)
         print("model_c_filepath: ", model_c_filepath)
         print("cl_dict: ", cl_dict)
         print("model_dict_l.keys(): ", model_dict_l.keys())
-
-        for cl_name, cl_desc in cl_dict["clusters"].items():
-
-            if cl_name in model_dict_l.keys():
-                cl_desc['models'] = model_dict_l[cl_name]
 
         with open(model_c_filepath, 'w') as fp:
             json.dump(cl_dict, fp, indent=4)

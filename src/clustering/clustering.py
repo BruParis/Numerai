@@ -226,7 +226,6 @@ def eras_clustering(era_l):
 
     #plot_matrix_clustering(era_l, full_era_cl_dict, bSave=True, bShow=False)
     plot_matrix_clustering(era_l, full_era_cl_dict, bSave=False, bShow=True)
-    exit(0)
 
     return full_era_cl_dict
 

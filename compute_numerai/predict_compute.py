@@ -30,6 +30,8 @@ os.system("python src/main.py snd cluster prediction")
 
 os.system("python src/main.py snd cluster final_prediction")
 
+os.system("python src/main.py full cluster valid")
+
 os.system("python src/main.py snd cluster upload")
 
 os.system("rm data/*.csv")

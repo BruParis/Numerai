@@ -12,7 +12,7 @@ from reader import set_h5_stores
 from prediction import make_prediction, final_pred, validation_score, upload_results
 
 ALL_OPERATIONS = ['set_h5', 'ft_era_corr', 'split_data', 'train',
-                  'prediction', 'final_prediction', 'upload']
+                  'prediction', 'final_prediction', 'valid', 'upload']
 
 
 def print_funct_calls(layers, strategies, operations_q):
@@ -37,6 +37,7 @@ def print_funct_calls(layers, strategies, operations_q):
                     continue
                 if op == 'final_prediction':
                     print('   --> final_pred')
+                if op == 'valid':
                     print('   --> validation_pred')
                     continue
                 if op == 'train':
@@ -123,22 +124,22 @@ def main(argv):
             print("strat: ", stra)
             strat_dir = ERA_CL_DIRNAME if stra == STRAT_CLUSTER else ERA_GRAPH_DIRNAME
             for l in layers:
+                print("layer: ", l)
+                if op == 'train':
+                    generate_models(stra, l)
+                    continue
                 if op == 'prediction':
                     make_prediction(stra, l, PREDICTION_TYPES)
                     continue
                 if op == 'final_prediction':
-                    final_pred(strat_dir)
-                    validation_score(strat_dir)
+                    final_pred(strat_dir, l)
+                if op == 'valid':
+                    validation_score(strat_dir, l)
                     continue
-                if op == 'train':
-                    generate_models(stra, l)
-                    continue
-
                 if op == 'upload':
                     upload_results(strat_dir, l)
                     break
 
-                print("layer: ", l)
                 if l == 'fst':
                     if op == 'split_data':
                         if stra == STRAT_CLUSTER:

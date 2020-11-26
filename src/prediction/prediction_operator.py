@@ -1,4 +1,3 @@
-import json
 import math
 import os
 import itertools
@@ -18,24 +17,7 @@ class PredictionOperator():
         corr = ReaderCSV(corr_path).read_csv().set_index('corr_features')
         return corr
 
-    def _load_models_json(self):
-        with open(self.layer_distrib_filepath, 'r') as f:
-            layer_distrib = json.load(f)
-
-            return layer_distrib
-
-    def _load_subset_models_json(self):
-        with open(self.layer_distrib_filepath, 'r') as f:
-            layer_distrib = json.load(f)
-
-            self.layer_distrib = layer_distrib
-            self.clusters = self.layer_distrib['clusters']
-            for sub_name, subset_desc in self.clusters.items():
-                subset_desc['corr_mat'] = self._load_corr_subset(sub_name)
-
-            return layer_distrib
-
-    def _model_proba(self, model_path, model_type, model_prefix, input_data):
+    def _model_predict_proba(self, model_path, model_type, model_prefix, input_data):
         print("path: ", model_path)
         print("model_type: ", model_type)
         print("model_prefix: ", model_prefix)
@@ -52,80 +34,98 @@ class PredictionOperator():
 
         return prediction_proba_df
 
-    def _aggregated_proba(self, input_data_ft, subset):
+    def _compute_proba_t_corr(self, proba, input_target):
+        print("************************************************")
+        print("*******                                  *******")
+        print("******* COMPUTE PROBA TARGET CORRELATION *******")
+        print("*******                                  *******")
+        print("************************************************")
+
+        # TODO :
+        # Duplicated code from final_prediction
+        proba_col_to_classes = dict(
+            zip(proba.columns, TARGET_CLASSES))
+        proba_target_label = proba.rename(columns=proba_col_to_classes)
+        pred_target_label = proba_target_label.idxmax(axis=1).astype(float)
+
+        proba_t_corr = np.corrcoef(pred_target_label, input_target)[0, 1]
+
+        return proba_t_corr
+
+    def _model_proba(self, input_data, cluster, eModel, model_desc):
+
+        cl_ft = cluster['selected_features']
+        input_data_ft = input_data[cl_ft]
+        input_target = input_data[TARGET_LABEL]
 
         models_proba_full = pd.DataFrame(dtype=np.float32)
         for col in models_proba_full.columns:
             models_proba_full[col].values[:] = 0.0
 
-        all_model_proba = []
-        for model_desc in subset['models']:
-            eModel = ModelType[model_desc['type']]
+        prefix = model_desc['prefix']
+        model_fp = model_desc['model_filepath']
+
+        pred_proba = self._model_predict_proba(
+            model_fp, eModel, prefix, input_data_ft)
+
+        if self.data_type == VALID_TYPE:
+            model_desc['valid_corr'] = self._compute_proba_t_corr(
+                pred_proba, input_target)
+
+        return pred_proba
+
+    def _make_cl_proba(self, input_data, input_data_corr, cluster):
+
+        cl_all_models_proba = {}
+        for model, model_desc in cluster['models'].items():
+
+            eModel = ModelType[model]
 
             if not (eModel in self.model_types):
                 continue
 
-            prefix = model_desc['prefix']
-            model_fp = model_desc['model_filepath']
+            cl_model_proba = self._model_proba(
+                input_data, cluster, eModel, model_desc)
 
-            pred_proba = self._model_proba(
-                model_fp, eModel, prefix, input_data_ft)
+            cl_all_models_proba[eModel.name] = cl_model_proba
 
-            all_model_proba.append(pred_proba)
+            # cl_score_proba = {}
+            # cl_score_proba['proba'] = cl_model_proba
+            # if self.strat == STRAT_CLUSTER:
+            #     # CHOICE
+            #     # Use cl score, or mean of target_corr in cluster as ponderation for proba?
+            #     # cl_score_proba['weight'] = cluster['score']
+            #     # or same as era_graph ????? -> need testing
+            #     cl_score_proba['weight'] = cluster['mean_t_corr']
+            # elif self.strat == STRAT_ERA_GRAPH:
+            # ==========================
+            # CHOICE
+            # cl_ft_corr = input_data_corr.loc[input_data_corr.index.isin(
+            #     cl_ft)][cl_ft]
+            # Need to check best formula for era (sub)datasets similarity
+            # / len (sub_ft) or len(sub_ft) ** 2 ?
+            # cl_corr_diff = (cl_ft_corr - cluster['corr_mat'].values)
+            # cl_corr_dist = (cl_corr_diff / len(cl_ft)) ** 2
+            # print("cl_corr_dist: ", cl_corr_dist)
+            # cl_score = math.sqrt(cl_corr_dist.values.sum())
+            # cl_score_proba['weight'] = cl_score
+            # ==========================
 
-        models_proba_full = pd.concat(all_model_proba, axis=1)
+        return cl_all_models_proba
 
-        return models_proba_full
-
-    def _make_cl_proba(self, input_data, input_data_corr, cluster):
-
-        cl_ft = cluster['selected_features']
-        input_data_ft = input_data[cl_ft]
-
-        cl_proba = self._aggregated_proba(input_data_ft, cluster)
-        print('cl_proba: ', cl_proba)
-
-        cl_ft_corr = input_data_corr.loc[input_data_corr.index.isin(
-            cl_ft)][cl_ft]
-
-        cl_score_proba = {}
-        cl_score_proba['proba'] = cl_proba
-
-        # if self.strat == STRAT_CLUSTER:
-        #     # CHOICE
-        #     # Use cl score, or mean of target_corr in cluster as ponderation for proba?
-        #     # cl_score_proba['weight'] = cluster['score']
-        #     # or same as era_graph ????? -> need testing
-        #     cl_score_proba['weight'] = cluster['mean_t_corr']
-        # elif self.strat == STRAT_ERA_GRAPH:
-        # ==========================
-        # CHOICE
-        # Need to check best formula for era (sub)datasets similarity
-        # / len (sub_ft) or len(sub_ft) ** 2 ?
-
-        cl_corr_diff = (cl_ft_corr - cluster['corr_mat'].values)
-        cl_corr_dist = (cl_corr_diff / len(cl_ft)) ** 2
-
-        #print("cl_corr_dist: ", cl_corr_dist)
-
-        cl_score = math.sqrt(cl_corr_dist.values.sum())
-        # ==========================
-
-        cl_score_proba['weight'] = cl_score
-
-        return cl_score_proba
-
-    def __init__(self, strat, dirname, layer_distrib_file, model_types, bMultiProcess=False):
+    def __init__(self, strat, dirname, model_const, model_types, data_type,
+                 bMultiProcess=False):
         self.strat = strat
+        self.data_type = data_type
         self.dirname = dirname
-        self.layer_distrib_filepath = self.dirname + '/' + layer_distrib_file
+        self.model_const = model_const
+        self.clusters = self.model_const['clusters']
 
         self.model_types = model_types
         self.model_prefixes = model_types
         self.bMultiProcess = bMultiProcess
 
     def make_fst_layer_predict(self, input_data):
-        self._load_subset_models_json()
 
         input_data_corr = input_data.corr()
 
@@ -138,15 +138,21 @@ class PredictionOperator():
                 self._make_cl_proba, sub_proba_param, collect=True, arg_tuple=True)
             sub_proba = dict(zip(cl_keys, sub_proba_l))
         else:
-            sub_proba = {sub_name: self._make_cl_proba(input_data, input_data_corr, subset)
-                         for sub_name, subset in self.clusters.items()}
+            sub_proba = {cl_name: self._make_cl_proba(input_data, input_data_corr, cluster)
+                         for cl_name, cluster in self.clusters.items()}
 
-        print("sub_proba: ", sub_proba)
+        # very complicated -> need simplification
+        full_proba = pd.DataFrame()
+        for eModel in self.model_types:
 
-        total_sim = sum(sub_proba['weight']
-                        for _, sub_proba in sub_proba.items())
-        full_proba = sum(sub_proba['proba'] * sub_proba['weight']
-                         for _, sub_proba in sub_proba.items()) / total_sim
+            cl_w = {cl: cl_desc['models'][eModel.name]['valid_corr']
+                    for cl, cl_desc in self.clusters.items()
+                    if cl_desc['models'][eModel.name]['valid_corr'] > 0}
+            total_w = sum([w for cl, w in cl_w.items()])
+            full_proba_model = sum(proba[eModel.name] * cl_w[cl]
+                                   for cl, proba in sub_proba.items()
+                                   if cl in cl_w.keys()) / total_w
+            full_proba = pd.concat([full_proba, full_proba_model], axis=1)
 
         return full_proba
 
@@ -161,11 +167,7 @@ class PredictionOperator():
         if TARGET_LABEL in data_df.columns:
             data_df = data_df.drop(TARGET_LABEL, axis=1)
 
-        self.layer_distrib = self._load_models_json()
-
-        print("self.layer_distrib: ", self.layer_distrib)
-        model_desc_l = self.layer_distrib['snd_layer']['models'] if bSnd else {
-        }
+        model_desc_l = self.model_const['snd_layer']['models'] if bSnd else {}
 
         all_model_proba = []
         for model_desc in model_desc_l:
@@ -178,7 +180,9 @@ class PredictionOperator():
             prefix = model_desc['prefix']
             model_fp = model_desc['model_filepath']
 
-            pred_model_proba = self._model_proba(
+            # pred_model_proba = self._model_proba(
+            #     model_fp, eModel, prefix, data_df)
+            pred_model_proba = self._model_predict_proba(
                 model_fp, eModel, prefix, data_df)
 
             print("pred_model_proba: ", pred_model_proba)
