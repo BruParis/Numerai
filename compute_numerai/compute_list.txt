@@ -1,4 +1,5 @@
 requirements_compute.txt
 
+predict_compute.py
 ../data_clusters_compute
-../src_docker
+../src

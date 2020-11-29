@@ -42,8 +42,9 @@ def load_orig_id_era_dt():
     return orig_df
 
 
-def upload_results(strat_dir, pred_l_suffix):
+def upload_results(strat_dir, pred_l):
 
+    pred_l_suffix = '_' + pred_l
     orig_data_id_era_dt = load_orig_id_era_dt()
 
     pred_validation_fp = strat_dir + \

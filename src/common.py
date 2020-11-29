@@ -1,5 +1,6 @@
 ERA_CL_DIRNAME = 'data_clusters'
 ERA_GRAPH_DIRNAME = 'data_graph'
+ERA_SIMPLE_DIRNAME = 'data_eras'
 ERA_CL_SUBDIR_PREFIX = 'cluster_'
 ERA_GRAPH_SUBDIR_PREFIX = 'graph_'
 DATA_DIRNAME = 'data'
@@ -7,6 +8,11 @@ SND_LAYER_DIRNAME = 'snd_layer'
 
 STRAT_CLUSTER = 'cluster'
 STRAT_ERA_GRAPH = 'era_graph'
+STRAT_ERA_SIMPLE = 'era'
+STRA_DIRNAME_DICT = {STRAT_CLUSTER: ERA_CL_DIRNAME,
+                     STRAT_ERA_SIMPLE: ERA_SIMPLE_DIRNAME, STRAT_ERA_GRAPH: ERA_GRAPH_DIRNAME}
+STRA_CL_PREFIX_DIR_DICT = {STRAT_CLUSTER: 'cluster_',
+                           STRAT_ERA_SIMPLE: 'era', STRAT_ERA_GRAPH: 'cluster_'}
 
 TRAINING_DATA_FP = DATA_DIRNAME + '/numerai_training_data.csv'
 TRAINING_STORE_H5_FP = DATA_DIRNAME + '/training_store.h5'
@@ -14,7 +20,7 @@ ERA_LABEL = 'era'
 
 TOURNAMENT_NAME = 'kazutsugi'
 PREDICTION_NAME = 'prediction_kazutsugi'
-#TARGET_LABEL = f"target_{TOURNAMENT_NAME}"
+# TARGET_LABEL = f"target_{TOURNAMENT_NAME}"
 TARGET_LABEL = "target"
 TARGET_VALUES = [0.0, 0.25, 0.5, 0.75, 1.0]
 TARGET_CLASSES = ['0.0', '0.25', '0.5', '0.75', '1.0']
@@ -31,9 +37,6 @@ TEST_RATIO = 0.20
 # era_ft_corr
 ERAS_FT_T_CORR_FP = DATA_DIRNAME + '/eras_ft_target_corr.csv'
 
-# clustering
-MIN_NUM_ERAS = 5
-# MIN_NUM_ERAS = 3
 MODEL_CONSTITUTION_FILENAME = 'model_constitution.json'
 ERA_CROSS_SCORE_FP = ERA_CL_DIRNAME + '/era_cross_score.csv'
 

@@ -5,7 +5,7 @@ from collections import deque
 
 from common import *
 from corr_analysis import feature_era_corr
-from clustering import clustering
+from clustering import clustering, simple_era_clustering
 from data_instruments import split_data_clusters, snd_layer_training_data
 from models import generate_models
 from reader import set_h5_stores
@@ -116,20 +116,20 @@ def main(argv):
             set_h5_stores()
             continue
 
-        if op == 'ft_era_corr':
-            feature_era_corr(TRAINING_DATA_FP, TRAINING_STORE_H5_FP)
-            continue
-
         for stra in strategies:
             print("strat: ", stra)
-            strat_dir = ERA_CL_DIRNAME if stra == STRAT_CLUSTER else ERA_GRAPH_DIRNAME
+            if stra == STRAT_CLUSTER and op == 'ft_era_corr':
+                feature_era_corr(TRAINING_DATA_FP, TRAINING_STORE_H5_FP)
+                continue
+
+            strat_dir = STRA_DIRNAME_DICT[stra]
             for l in layers:
                 print("layer: ", l)
                 if op == 'train':
-                    generate_models(stra, l)
+                    generate_models(strat_dir, stra, l)
                     continue
                 if op == 'prediction':
-                    make_prediction(stra, l, PREDICTION_TYPES)
+                    make_prediction(strat_dir, stra, l, PREDICTION_TYPES)
                     continue
                 if op == 'final_prediction':
                     final_pred(strat_dir, l)
@@ -144,6 +144,8 @@ def main(argv):
                     if op == 'split_data':
                         if stra == STRAT_CLUSTER:
                             clustering(strat_dir)
+                        elif stra == STRAT_ERA_SIMPLE:
+                            simple_era_clustering(strat_dir)
                         split_data_clusters(strat_dir)
                         continue
 

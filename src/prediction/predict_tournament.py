@@ -125,9 +125,7 @@ def make_prediction_snd(strat, strat_dir, model_dict, data_types_fp, model_types
     return pred_descr
 
 
-def make_prediction(strat, layer, data_types):
-
-    strat_dir = ERA_CL_DIRNAME if strat == STRAT_CLUSTER else ERA_GRAPH_DIRNAME
+def make_prediction(strat_dir, strat, layer, data_types):
 
     print('data_types: ', data_types)
 

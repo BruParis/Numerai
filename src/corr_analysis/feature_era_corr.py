@@ -65,7 +65,9 @@ def feature_era_corr(data_csv, data_h5):
     # remove useless read for features, once h5 contains 'features' table
     # just like eras
     file_reader = ReaderCSV(data_csv)
-    data_df = file_reader.read_csv().set_index("id")
+    #data_df = file_reader.read_csv().set_index("id")
+
+    data_df = file_reader.read_csv_header
 
     # fts = pd.read_hdf(data_filename, 'features')
 
@@ -80,3 +82,10 @@ def feature_era_corr(data_csv, data_h5):
     print("eras_ft_target_corr: ", eras_ft_target_corr)
 
     eras_ft_target_corr.to_csv(ERAS_FT_T_CORR_FP, index=True)
+
+
+def feature_t_corr(data_df, features):
+    ft_corr = pd.Series({ft: np.corrcoef(data_df[TARGET_LABEL], data_df[ft])[0, 1]
+                         for ft in features})
+
+    return ft_corr

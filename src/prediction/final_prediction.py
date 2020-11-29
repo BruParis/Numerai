@@ -111,9 +111,10 @@ def final_pred(strat_dir, l):
 
     # FST LAYER
     if l == 'fst' or l == 'full':
-        model_dict_pred[FST_LAYER]['models_final'] = ['rf', 'neural_net']
+        model_dict_pred[FST_LAYER]['models_final'] = [
+            'xgboost', 'rf', 'neural_net']
         predictions_fst_layer_fp = [
-            strat_dir + '/predictions_tournament_' + d_t + '_fst_layer.csv' for d_t in PREDICTION_TYPES]
+            strat_dir + '/predictions_tournament_' + d_t + PRED_FST_SUFFIX for d_t in PREDICTION_TYPES]
 
         fst_layer_data_types_fp = list(
             zip(PREDICTION_TYPES, predictions_fst_layer_fp))
@@ -125,7 +126,7 @@ def final_pred(strat_dir, l):
         model_dict_pred[SND_LAYER]['models_final'] = [
             'xgboost', 'rf', 'neural_net']
         predictions_snd_layer_fp = [
-            strat_dir + '/predictions_tournament_' + d_t + '_snd_layer.csv' for d_t in PREDICTION_TYPES]
+            strat_dir + '/predictions_tournament_' + d_t + PRED_SND_SUFFIX for d_t in PREDICTION_TYPES]
 
         snd_layer_data_types_fp = list(
             zip(PREDICTION_TYPES, predictions_snd_layer_fp))

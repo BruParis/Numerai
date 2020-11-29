@@ -300,12 +300,11 @@ def generate_snd_layer_model(dirname, bDebug, bMetrics, bSaveModel):
             json.dump(cl_dict, fp, indent=4)
 
 
-def generate_models(strat, layer):
+def generate_models(strat_dir, strat, layer):
 
-    dirname = ERA_CL_DIRNAME if strat == "cluster" else ERA_GRAPH_DIRNAME
-    cl_dir_prefix = "cluster_"
+    cl_dir_prefix = STRA_CL_PREFIX_DIR_DICT[strat]
 
-    _, dirs, _ = next(os.walk(dirname))
+    _, dirs, _ = next(os.walk(strat_dir))
     cl_dirname_l = [cl_dir for cl_dir in dirs if cl_dir_prefix in cl_dir]
     # cl_dirname_l = [cl_dirname_l[0]]  # DEBUG
     print("cl_dirname_l: ", cl_dirname_l)
@@ -318,7 +317,7 @@ def generate_models(strat, layer):
     bSaveModelDict = True
 
     if layer == 'fst':
-        generate_fst_layer_model(dirname, cl_dirname_l, bDebug, bMetrics, bSaveModel,
+        generate_fst_layer_model(strat_dir, cl_dirname_l, bDebug, bMetrics, bSaveModel,
                                  bMultiProc, bSaveModelDict)
     elif layer == 'snd':
-        generate_snd_layer_model(dirname, bDebug, bMetrics, bSaveModel)
+        generate_snd_layer_model(strat_dir, bDebug, bMetrics, bSaveModel)

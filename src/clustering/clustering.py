@@ -17,9 +17,7 @@ import scipy.cluster.hierarchy as sch
 from scipy.cluster.hierarchy import fcluster
 sns.set_theme(color_codes=True)
 
-# CHOICE
-CL_THRESHOLD_FT_T_CORR = 0.33
-CL_THRESHOLD_FT_SCORE = 0.66
+MIN_NUM_ERAS = 3
 
 
 def plot_mat(data):

@@ -26,13 +26,11 @@ os.system("rm current_dataset.zip")
 
 os.system("python src/main.py fst cluster prediction")
 
-os.system("python src/main.py snd cluster prediction")
-
-os.system("python src/main.py snd cluster final_prediction")
+os.system("python src/main.py fst cluster final_prediction")
 
 os.system("python src/main.py full cluster valid")
 
-os.system("python src/main.py snd cluster upload")
+os.system("python src/main.py fst cluster upload")
 
 os.system("rm data/*.csv")
 os.system("rm data_clusters/pred*.csv")
