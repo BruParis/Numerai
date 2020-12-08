@@ -8,14 +8,6 @@ from .model_abstract import Model, ModelType
 
 class XGBModel(Model):
 
-    def _xgbformat_data(self, data):
-
-        if ERA_LABEL in data.columns:
-            data = data.drop([ERA_LABEL], axis=1)
-        res = xgb.DMatrix(data, label=TARGET_VALUES)
-
-        return res
-
     def __init__(self, dirname, model_params=None, debug=False, filename=None):
 
         Model.__init__(self, ModelType.XGBoost, dirname,

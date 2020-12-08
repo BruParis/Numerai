@@ -121,9 +121,9 @@ def make_model_prefix(eModel):
     return [5, 10, 30]
 
 
-def cl_model_build(dirname, cl_dirname, bSaveModel=False, bMetrics=False, model_debug=False):
+def cl_model_build(dirname, cl, bSaveModel=False, bMetrics=False, model_debug=False):
 
-    cl_dirpath = dirname + '/' + cl_dirname
+    cl_dirpath = dirname + '/' + cl
     train_filepath = cl_dirpath + '/' + 'training_data.csv'
     test_filepath = cl_dirpath + '/' + 'test_data.csv'
 
@@ -134,7 +134,7 @@ def cl_model_build(dirname, cl_dirname, bSaveModel=False, bMetrics=False, model_
     # if bMultiProc:
     # Parallelism only shows a slight speed improvment
     # -> not enough memory for mutliple thread w/ full dataset (?)
-    # model_metrics_arg = list(zip(itertools.repeat(cl_dirname), itertools.repeat(
+    # model_metrics_arg = list(zip(itertools.repeat(cl), itertools.repeat(
     #     metrics_filename), itertools.repeat(train_data), itertools.repeat(test_data), model_params_array))
     # pool_map(model_itf.generate_model, model_metrics_arg)
     # else:
@@ -174,7 +174,27 @@ def cl_model_build(dirname, cl_dirname, bSaveModel=False, bMetrics=False, model_
                     model_dict['config_filepath'] = configpath
                     model_l[model_type.name] = model_dict
 
-    return cl_dirname, model_l
+    return cl, model_l
+
+
+def generate_cl_model(dirname, cl):
+
+    bDebug = True
+    bMetrics = True
+    bSaveModel = True
+
+    model_filepath = dirname + '/' + MODEL_CONSTITUTION_FILENAME
+    model_dict = load_json(model_filepath)
+
+    _, model_gen_l = cl_model_build(dirname, cl, bSaveModel, bMetrics, bDebug)
+
+    model_dict['clusters'][cl]['models'] = model_gen_l
+
+    if bSaveModel:
+        print("model_c_filepath: ", model_filepath)
+
+        with open(model_filepath, 'w') as fp:
+            json.dump(model_dict, fp, indent=4)
 
 
 def generate_fst_layer_model(dirname, cl_dirname_l, bDebug, bMetrics, bSaveModel,

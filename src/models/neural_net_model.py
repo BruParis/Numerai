@@ -63,12 +63,6 @@ class NeuralNetwork(Model):
             print("batch: ", batch)
             print("label: ", label)
 
-    def _label_array(self, x):
-        res = np.zeros(len(TARGET_VALUES))
-        res[int(x)] = 1.0
-
-        return res
-
     def _pack_input_target_ds(self, input_df, target_df, batch_size=None):
 
         # if shuffle
@@ -167,9 +161,11 @@ class NeuralNetwork(Model):
                 [supp_train_data, class_train_data.sample(num_last_samples)], axis=0)
 
         res = pd.concat([supp_train_data, train_data], axis=0)
+        res = res.sample(frac=1)
         res_sampling_dict = {
             t: len(res.loc[res[TARGET_LABEL] == t].index) for t in TARGET_VALUES}
-        print("sampling_dict: ", res_sampling_dict)
+        print("res_sampling_dict: ", res_sampling_dict)
+
         return res
 
     def build_model(self, train_data):

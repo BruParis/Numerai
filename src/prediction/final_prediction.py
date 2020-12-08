@@ -2,10 +2,19 @@ import os
 import json
 import pandas as pd
 import numpy as np
+import itertools as it
+
 from common import *
 from reader import ReaderCSV
 from prediction import PredictionOperator
+from corr_analysis import valid_score
 from models import ModelType
+from .ranking import rank_pred
+
+ARITHM_MEAN_RANK = 'a_mean_rank'
+GEOM_MEAN_RANK = 'g_mean_rank'
+
+METHODS = [ARITHM_MEAN_RANK, GEOM_MEAN_RANK]
 
 
 def load_json(fp):
@@ -22,19 +31,61 @@ def load_data(fp):
     return input_data
 
 
-def final_predict_layer(dirname, model_dict_pred, data_types_fp, layer):
+def arith_mean_rank(data_df):
+    a_mean = data_df.mean(axis=1)
+    a_mean_r = rank_pred(a_mean)
 
-    if layer not in LAYER_PRED_SUFFIX.keys():
-        print("wrong layer provided")
-        return
+    return a_mean_r
 
-    layer_pred_descrb = model_dict_pred[layer]
-    model_types = layer_pred_descrb['models_final']
-    print("layer_pred_descrb: ", layer_pred_descrb)
+
+def models_method_col(models, method):
+    prefix_l = ''.join([mod + '_' for mod in models]) + method
+    return prefix_l
+
+
+def geo_mean_rank(data_df):
+    g_mean = np.exp(np.log(data_df.prod(axis=1)) / data_df.notna().sum(1))
+    g_mean_r = rank_pred(g_mean)
+
+    return g_mean_r
+
+
+def save_predict(dirname, data_t, layer, pred_df):
+    pred_suffix = LAYER_PRED_SUFFIX[layer]
+    predict_fp = dirname + '/' + FINAL_PREDICT_FILENAME + data_t + pred_suffix
+
+    with open(predict_fp, 'w') as f:
+        pred_df.to_csv(f, index=True)
+
+
+def aggr_model_comb(data_df, model_comb):
+
+    # TODO : use weight means with models valid corr as weights
+
+    print("model_comb: ", model_comb)
+
+    a_mean_r = arith_mean_rank(data_df[model_comb])
+    g_mean_r = geo_mean_rank(data_df[model_comb])
+
+    res = pd.concat([a_mean_r, g_mean_r], axis=1)
+
+    res.columns = [models_method_col(model_comb, m) for m in METHODS]
+
+    print("res: ", res)
+
+    return res
+
+
+def final_predict_fst_layer(dirname, pred_dict, model_types, data_types_fp):
+
+    max_comb = len(model_types)
+    model_t_comb = list(it.chain.from_iterable(
+        [it.combinations(model_types, c_len)
+         for c_len in range(2, max_comb + 1)]
+    ))
+    print("model_t_comb: ", model_t_comb)
 
     for data_t, fpath in data_types_fp:
-        if data_t not in layer_pred_descrb.keys():
-            continue
 
         if not os.path.exists(fpath):
             print("fst layer file not found at:", fpath)
@@ -42,50 +93,40 @@ def final_predict_layer(dirname, model_dict_pred, data_types_fp, layer):
 
         data_df = load_data(fpath)
 
-        columns = layer_pred_descrb[data_t]
+        print("data_df: ", data_df)
 
-        result_vote = pd.DataFrame()
+        aggr_l = [aggr_model_comb(data_df, list(comb))for comb in model_t_comb]
 
-        proba_0_label = '_' + COL_PROBA_NAMES[0]
-        model_col = [col.replace(proba_0_label,  '')
-                     for col in columns if proba_0_label in col]
+        result_vote = pd.concat(aggr_l, axis=1)
+        print("result_vote: ", result_vote)
 
-        for model in model_col:
+        if data_t is VALID_TYPE:
+            for col in result_vote.columns:
+                pred_dict[col] = valid_score(result_vote, col)
 
-            if model not in model_types:
-                continue
+        save_predict(dirname, data_t, FST_LAYER, result_vote)
 
-            model_col = [col for col in data_df.columns if model in col]
-            model_data = data_df[model_col]
 
-            model_col_to_classes = dict(
-                zip(model_data.columns, TARGET_CLASSES))
-            model_data = model_data.rename(columns=model_col_to_classes)
-            model_prediction = model_data.idxmax(axis=1)
-            result_vote[model] = model_prediction
+def compute_final_pred(dirname, data_types_fp, model_types, method):
 
-        class_col = {proba.replace('proba_', ''): list(filter(
-            None, [col if proba in col else None for col in columns])) for proba in COL_PROBA_NAMES}
+    for data_t, fpath in data_types_fp:
 
-        arithmetic_mean = pd.DataFrame()
-        # geometric_mean = pd.DataFrame()
-        for target_class, columns in class_col.items():
+        if not os.path.exists(fpath):
+            print("fst layer file not found at:", fpath)
+            continue
+        col = models_method_col(model_types, method)
 
-            filtered_columns = [
-                col for col in columns if col.startswith(tuple(model_types))]
+        data_df = load_data(fpath)
+        data_model_t_df = data_df[model_types]
 
-            arithmetic_mean[target_class] = data_df[filtered_columns].mean(
-                axis=1)
-            # geometric_mean[target_class] = np.exp(
-            #     np.log(data_df[columns].prod(axis=1))/data_df[columns].notna().sum(1))
+        if method == ARITHM_MEAN_RANK:
+            res = pd.DataFrame(arith_mean_rank(
+                data_model_t_df), columns=[col])
+        elif method == GEOM_MEAN_RANK:
+            res = pd.DataFrame(geo_mean_rank(
+                data_model_t_df), columns=[col])
 
-        result_vote['arithmetic_mean'] = arithmetic_mean.idxmax(axis=1)
-
-        pred_suffix = LAYER_PRED_SUFFIX[layer]
-        predict_fp = dirname + '/' + FINAL_PREDICT_FILENAME + data_t + pred_suffix
-
-        with open(predict_fp, 'w') as f:
-            result_vote.to_csv(f, index=True)
+        save_predict(dirname, data_t, FST_LAYER, res)
 
 
 def final_pred(strat_dir, l):
@@ -93,45 +134,29 @@ def final_pred(strat_dir, l):
     model_dict_fp = strat_dir + '/' + MODEL_CONSTITUTION_FILENAME
     model_dict = load_json(model_dict_fp)
 
-    # model_types = {'full': {'models': ['xgboost', 'rf', 'neural_net']},
-    # model_types = {'fst': {'models': ['xgboost', 'rf', 'neural_net']},
-    #                'snd': {'models': ['xgboost', 'rf', 'neural_net']}}
-    model_dict_pred = model_dict['predictions']
-
-    # FULL
-    # full_dirname = dirname + '/full'
-    # full_models_fp = full_dirname + '/full_models.json'
-    # predictions_full_fp = [
-    #     full_dirname + '/predictions_tournament_' + d_t + '_full.csv' for d_t in data_types]
-
-    # fulll_data_types_fp = list(
-    #     zip(data_types, predictions_full_fp))
-    # final_predict_layer(dirname, full_models_fp, model_types['full']['models'],
-    #                     fulll_data_types_fp, 0)
-
     # FST LAYER
+    if 'final_pred' not in model_dict.keys():
+        model_dict['final_pred'] = dict()
+
+    model_final_dict = model_dict['final_pred']
     if l == 'fst' or l == 'full':
-        model_dict_pred[FST_LAYER]['models_final'] = [
-            'xgboost', 'rf', 'neural_net']
-        predictions_fst_layer_fp = [
-            strat_dir + '/predictions_tournament_' + d_t + PRED_FST_SUFFIX for d_t in PREDICTION_TYPES]
-
+        pred_fst_layer_fp = [strat_dir + '/predictions_tournament_' +
+                             d_t + PRED_FST_SUFFIX for d_t in PREDICTION_TYPES]
         fst_layer_data_types_fp = list(
-            zip(PREDICTION_TYPES, predictions_fst_layer_fp))
-        final_predict_layer(strat_dir, model_dict_pred,
-                            fst_layer_data_types_fp, FST_LAYER)
+            zip(PREDICTION_TYPES, pred_fst_layer_fp))
+        if COMPUTE_BOOL:
+            compute_model_types = ['RandomForest', 'NeuralNetwork']
+            method = ARITHM_MEAN_RANK
+            compute_final_pred(
+                strat_dir, fst_layer_data_types_fp, compute_model_types, method)
+        else:
+            model_types = ['XGBoost', 'RandomForest', 'NeuralNetwork']
+            model_final_dict[FST_LAYER] = dict()
+            model_f_fst_dict = model_final_dict[FST_LAYER]
 
-    # SND LAYER
-    if l == 'snd' or l == 'full':
-        model_dict_pred[SND_LAYER]['models_final'] = [
-            'xgboost', 'rf', 'neural_net']
-        predictions_snd_layer_fp = [
-            strat_dir + '/predictions_tournament_' + d_t + PRED_SND_SUFFIX for d_t in PREDICTION_TYPES]
+            final_predict_fst_layer(strat_dir, model_f_fst_dict, model_types,
+                                    fst_layer_data_types_fp)
 
-        snd_layer_data_types_fp = list(
-            zip(PREDICTION_TYPES, predictions_snd_layer_fp))
-        final_predict_layer(strat_dir, model_dict_pred,
-                            snd_layer_data_types_fp, SND_LAYER)
-
-    with open(model_dict_fp, 'w') as fp:
-        json.dump(model_dict, fp, indent=4)
+    if not COMPUTE_BOOL:
+        with open(model_dict_fp, 'w') as fp:
+            json.dump(model_dict, fp, indent=4)

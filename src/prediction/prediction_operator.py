@@ -34,24 +34,6 @@ class PredictionOperator():
 
         return prediction_proba_df
 
-    def _compute_proba_t_corr(self, proba, input_target):
-        print("************************************************")
-        print("*******                                  *******")
-        print("******* COMPUTE PROBA TARGET CORRELATION *******")
-        print("*******                                  *******")
-        print("************************************************")
-
-        # TODO :
-        # Duplicated code from final_prediction
-        proba_col_to_classes = dict(
-            zip(proba.columns, TARGET_CLASSES))
-        proba_target_label = proba.rename(columns=proba_col_to_classes)
-        pred_target_label = proba_target_label.idxmax(axis=1).astype(float)
-
-        proba_t_corr = np.corrcoef(pred_target_label, input_target)[0, 1]
-
-        return proba_t_corr
-
     def _model_proba(self, input_data, cluster, eModel, model_desc):
 
         cl_ft = cluster['selected_features']
@@ -68,16 +50,12 @@ class PredictionOperator():
         pred_proba = self._model_predict_proba(
             model_fp, eModel, prefix, input_data_ft)
 
-        if self.data_type == VALID_TYPE:
-            model_desc['valid_corr'] = self._compute_proba_t_corr(
-                pred_proba, input_target)
-
         return pred_proba
 
-    def _make_cl_proba(self, input_data, input_data_corr, cluster):
+    def _make_cl_proba_dict(self, input_data, cl_dict):
 
         cl_all_models_proba = {}
-        for model, model_desc in cluster['models'].items():
+        for model, model_desc in cl_dict['models'].items():
 
             eModel = ModelType[model]
 
@@ -85,7 +63,7 @@ class PredictionOperator():
                 continue
 
             cl_model_proba = self._model_proba(
-                input_data, cluster, eModel, model_desc)
+                input_data, cl_dict, eModel, model_desc)
 
             cl_all_models_proba[eModel.name] = cl_model_proba
 
@@ -125,34 +103,15 @@ class PredictionOperator():
         self.model_prefixes = model_types
         self.bMultiProcess = bMultiProcess
 
-    def make_fst_layer_predict(self, input_data):
+    def make_cl_predict(self, input_data, cl):
+        cl_dict = self.clusters[cl]
 
-        input_data_corr = input_data.corr()
+        cl_proba = self._make_cl_proba_dict(input_data, cl_dict)
 
-        cl_keys = self.clusters.keys()
-        cl_values = self.clusters.values()
-        if self.bMultiProcess:
-            sub_proba_param = list(zip(itertools.repeat(
-                input_data), itertools.repeat(input_data_corr), cl_values))
-            sub_proba_l = pool_map(
-                self._make_cl_proba, sub_proba_param, collect=True, arg_tuple=True)
-            sub_proba = dict(zip(cl_keys, sub_proba_l))
-        else:
-            sub_proba = {cl_name: self._make_cl_proba(input_data, input_data_corr, cluster)
-                         for cl_name, cluster in self.clusters.items()}
-
-        # very complicated -> need simplification
         full_proba = pd.DataFrame()
         for eModel in self.model_types:
 
-            cl_w = {cl: cl_desc['models'][eModel.name]['valid_corr']
-                    for cl, cl_desc in self.clusters.items()
-                    if cl_desc['models'][eModel.name]['valid_corr'] > 0}
-            total_w = sum([w for cl, w in cl_w.items()])
-            full_proba_model = sum(proba[eModel.name] * cl_w[cl]
-                                   for cl, proba in sub_proba.items()
-                                   if cl in cl_w.keys()) / total_w
-            full_proba = pd.concat([full_proba, full_proba_model], axis=1)
+            full_proba = pd.concat([full_proba, cl_proba[eModel.name]], axis=1)
 
         return full_proba
 

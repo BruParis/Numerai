@@ -18,24 +18,18 @@ class ModelType(enum.Enum):
 class Model(ABC):
 
     def _get_model_name(self, model_type, model_params):
-        if model_type == ModelType.RandomForest:
-            return 'rf'
-
-        if model_type == ModelType.XGBoost:
-            return 'xgboost'
-
-        if model_type == ModelType.NeuralNetwork:
-            return 'neural_net'
-
         if model_type == ModelType.K_NN:
             filename = str(model_params['n_neighbors']) + '_nn'
             return filename
 
+        return model_type.name
+
     # for model type XGB -> era column removal already done for xgb.DMatrix
+
     def _format_input_target(self, data_df):
 
         # if self.model_type is not ModelType.XGBoost:
-        if ERA_LABEL in data_df.columns: 
+        if ERA_LABEL in data_df.columns:
             data_df = data_df.drop([ERA_LABEL], axis=1)
 
         input_df = data_df.drop([TARGET_LABEL], axis=1)

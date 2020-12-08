@@ -55,26 +55,21 @@ class ReaderCSV():
 
     def read_csv_matching(self, filter_col, filter_values, columns=None):
 
-        data_col = pd.read_csv(self.filepath, usecols=[
-            filter_col])
+        full_data_id = pd.read_csv(self.filepath, usecols=['id'])
+        data_col = pd.read_csv(self.filepath, usecols=['id', filter_col])
+        data_col_sel = data_col.loc[data_col[filter_col].isin(
+            filter_values)]
 
-        data_col_fst = data_col.drop_duplicates()
-        data_col_last = data_col.drop_duplicates(keep='last')
+        data_skip_ids = full_data_id.drop(data_col_sel.index)
+        data_skip_ids = np.array(data_skip_ids.dropna().index) + 1
+        data_skip_ids = np.delete(
+            data_skip_ids, np.where(data_skip_ids == 1), axis=0)
 
-        data_col_fst_idx = data_col_fst.loc[data_col[filter_col].isin(
-            filter_values)].index.values
+        data_match = pd.read_csv(self.filepath,
+                                 skiprows=data_skip_ids,
+                                 usecols=columns)
 
-        data_col_last_idx = data_col_last.loc[data_col[filter_col].isin(
-            filter_values)].index.values
-        data_col_last_idx += 1  # Take header into row count!
-
-        data_fst_last_idx = zip(data_col_fst_idx, data_col_last_idx)
-
-        data_match = [self.read_idx_to_idx(fst_idx, last_idx, columns)
-                      for fst_idx, last_idx in data_fst_last_idx]
-
-        data_match_full = pd.concat(data_match)
-        return data_match_full
+        return data_match
 
     def read_csv(self, skip_lambda=None, columns=None):
         # Read the csv file into a pandas Dataframe

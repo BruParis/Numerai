@@ -52,11 +52,12 @@ def upload_results(strat_dir, pred_l):
     pred_test_fp = strat_dir + '/' + FINAL_PRED_TEST_FILENAME + pred_l_suffix + '.csv'
     pred_live_fp = strat_dir + '/' + FINAL_PRED_LIVE_FILENAME + pred_l_suffix + '.csv'
 
-    model_type = 'rf'
+    #pred_method = 'rf'
+    pred_method = 'RandomForest_NeuralNetwork_a_mean_rank'
 
-    valid_data = load_predict_file(pred_validation_fp, model_type)
-    test_data = load_predict_file(pred_test_fp, model_type)
-    live_data = load_predict_file(pred_live_fp, model_type)
+    valid_data = load_predict_file(pred_validation_fp, pred_method)
+    test_data = load_predict_file(pred_test_fp, pred_method)
+    live_data = load_predict_file(pred_live_fp, pred_method)
 
     pred_data = pd.concat([valid_data, test_data, live_data], axis=0)
     # pred_data = live_data
