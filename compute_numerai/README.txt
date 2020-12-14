@@ -1,3 +1,8 @@
+# delete all docker
+sudo docker system prune -a
+
+-------------
+
 # clean data_cluster from useless files
 
 # start pipenv
