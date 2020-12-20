@@ -6,7 +6,7 @@ from collections import deque
 from common import *
 from corr_analysis import feature_era_corr
 from clustering import clustering, simple_era_clustering
-from data_instruments import split_data_clusters, snd_layer_training_data
+from format_data import split_data_clusters, snd_layer_training_data
 from models import generate_models, generate_cl_model
 from reader import set_h5_stores
 from prediction import make_prediction, make_cluster_predict, final_pred, upload_results
