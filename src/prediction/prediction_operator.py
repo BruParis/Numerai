@@ -115,37 +115,35 @@ class PredictionOperator():
 
         return full_proba
 
+    def make_snd_layer_predict(self, data_df, bSnd=True):
 
-def make_snd_layer_predict(self, data_df, bSnd=True):
+        if 'era' in data_df.columns:
+            data_df = data_df.drop('era', axis=1)
 
-    if 'era' in data_df.columns:
-        data_df = data_df.drop('era', axis=1)
+        if 'data_type' in data_df.columns:
+            data_df = data_df.drop('data_type', axis=1)
 
-    if 'data_type' in data_df.columns:
-        data_df = data_df.drop('data_type', axis=1)
+        if TARGET_LABEL in data_df.columns:
+            data_df = data_df.drop(TARGET_LABEL, axis=1)
 
-    if TARGET_LABEL in data_df.columns:
-        data_df = data_df.drop(TARGET_LABEL, axis=1)
+        snd_layer_desc = self.model_const['snd_layer']
+        gen_model = snd_layer_desc['models']['gen_models'] if bSnd else {}
 
-    model_desc_l = self.model_const['snd_layer']['models'] if bSnd else {}
+        full_proba = pd.DataFrame()
+        for model_desc in gen_model:
 
-    full_proba = pd.DataFrame()
-    for model_desc in model_desc_l:
+            eModel = ModelType[model_desc['type']]
 
-        eModel = ModelType[model_desc['type']]
+            if not (eModel in self.model_types):
+                continue
 
-        if not (eModel in self.model_types):
-            continue
+            prefix = model_desc['prefix']
+            model_fp = model_desc['model_filepath']
 
-        prefix = model_desc['prefix']
-        model_fp = model_desc['model_filepath']
+            pred_model_proba = self._model_predict_proba(
+                model_fp, eModel, prefix, data_df)
 
-        # pred_model_proba = self._model_proba(
-        #     model_fp, eModel, prefix, data_df)
-        pred_model_proba = self._model_predict_proba(
-            model_fp, eModel, prefix, data_df)
+            print("pred_model_proba: ", pred_model_proba)
+            full_proba = pd.concat([full_proba, pred_model_proba], axis=1)
 
-        print("pred_model_proba: ", pred_model_proba)
-        full_proba = pd.concat([full_proba, pred_model_proba], axis=1)
-
-    return full_proba
+        return full_proba

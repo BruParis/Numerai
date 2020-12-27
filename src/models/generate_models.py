@@ -59,9 +59,13 @@ def make_fst_layer_model_params(eModel, model_prefix=None):
     if eModel == ModelType.NeuralNetwork:
         num_layers = [1]  # np.linspace(start=1, stop=4, num=1)
         layer_size_factor = [0.66]
+        train_batch_size = [1000]
+        num_epoch = [30]
         model_params_array = map(
-            lambda x: {'num_layers': int(x[0]), 'size_factor': float(
-                x[1])}, itertools.product(*[num_layers, layer_size_factor]))
+            lambda x: {'num_layers': int(x[0]), 'size_factor': float(x[1]),
+                       'train_batch_size': int(x[2]),
+                       'num_epoch': int(x[3])},
+            itertools.product(*[num_layers, layer_size_factor, train_batch_size, num_epoch]))
 
         return model_params_array
 
@@ -98,9 +102,13 @@ def make_snd_layer_model_params(eModel, model_prefix=None):
     if eModel == ModelType.NeuralNetwork:
         num_layers = [1]  # np.linspace(start=1, stop=4, num=1)
         layer_size_factor = [0.66]  # [0.33, 0.5, 0.66]
+        train_batch_size = [50000]
+        num_epoch = [25]
         model_params_array = map(
-            lambda x: {'num_layers': int(x[0]), 'size_factor': float(
-                x[1])}, itertools.product(*[num_layers, layer_size_factor]))
+            lambda x: {'num_layers': int(x[0]), 'size_factor': float(x[1]),
+                       'train_batch_size': int(x[2]),
+                       'num_epoch': int(x[3])},
+            itertools.product(*[num_layers, layer_size_factor, train_batch_size, num_epoch]))
 
         return model_params_array
 
@@ -140,9 +148,6 @@ def cl_model_build(dirname, cl, bSaveModel=False, bMetrics=False, model_debug=Fa
     # else:
 
     # model_types = ModelType
-    # model_types = [ModelType.K_NN]
-    # model_types = [ModelType.RandomForest]
-    # model_types = [ModelType.NeuralNetwork]
     model_types = [ModelType.XGBoost, ModelType.RandomForest,
                    ModelType.NeuralNetwork]  # , ModelType.K_NN]
 
@@ -242,18 +247,36 @@ def load_data_filter_id(data_filename, list_id, columns=None):
     return data_df
 
 
-def snd_layer_model_build(snd_layer_dirname, full_train_data, bSaveModel=False,
+def snd_layer_model_build(cl_dict, snd_layer_dirname, full_train_data, bSaveModel=False,
                           bMetrics=False, model_debug=False):
 
+    input_models = ['XGBoost', 'RandomForest', 'NeuralNetwork']
+
+    f_train_data = pd.DataFrame()
+    for cl in cl_dict['clusters']:
+        aux_df = full_train_data.loc[:,
+                                     full_train_data.columns.str.startswith(cl+'_')]
+        for i_m in input_models:
+            i_m_train_data = aux_df.loc[:, aux_df.columns.str.find(i_m) > -1]
+            f_train_data = pd.concat([f_train_data, i_m_train_data], axis=1)
+    f_train_target_data = pd.concat(
+        [f_train_data, full_train_data[TARGET_LABEL]], axis=1)
+
+    print("f_train_data: ", f_train_target_data)
     train_data, test_data = train_test_split(
-        full_train_data, test_size=TEST_RATIO)
+        f_train_target_data, test_size=TEST_RATIO)
 
     model_types = [ModelType.XGBoost, ModelType.RandomForest,
                    ModelType.NeuralNetwork]  # , ModelType.K_NN]
+    # model_types = [ModelType.NeuralNetwork]
 
     model_generator = ModelGenerator(snd_layer_dirname)
 
-    model_l = []
+    model_l = dict()
+    model_l['input_models'] = input_models
+    model_l['input_columns'] = f_train_data.columns.tolist()
+    model_l['gen_models'] = []
+
     for model_type in model_types:
         for model_prefix in make_model_prefix(model_type):
 
@@ -280,7 +303,7 @@ def snd_layer_model_build(snd_layer_dirname, full_train_data, bSaveModel=False,
                     filepath, configpath = model.save_model()
                     model_dict['model_filepath'] = filepath
                     model_dict['config_filepath'] = configpath
-                    model_l.append(model_dict)
+                    model_l['gen_models'].append(model_dict)
 
     return model_l
 
@@ -288,33 +311,22 @@ def snd_layer_model_build(snd_layer_dirname, full_train_data, bSaveModel=False,
 def generate_snd_layer_model(dirname, bDebug, bMetrics, bSaveModel):
     snd_layer_dirname = dirname + '/' + SND_LAYER_DIRNAME
 
-    snd_layer_training_data_filename = snd_layer_dirname + '/' + SND_LAYER_FILENAME
-    snd_layer_training_data = load_data(snd_layer_training_data_filename)
+    snd_layer_train_data_fp = dirname + '/' + PRED_TRAIN_FILENAME
+    snd_layer_train_data = load_data(snd_layer_train_data_fp)
 
-    snd_layer_training_data_target = load_data_filter_id(
-        TRAINING_DATA_FP, snd_layer_training_data.index, ['id', TARGET_LABEL])
+    print("snd_layer_training_data.columns: ", snd_layer_train_data.columns)
 
-    print("snd_layer_training_data: ", snd_layer_training_data)
-    print("snd_layer_training_data_target: ", snd_layer_training_data_target)
+    model_c_filepath = dirname + '/' + MODEL_CONSTITUTION_FILENAME
+    cl_dict = load_json(model_c_filepath)
 
-    snd_layer_training_data = pd.concat(
-        [snd_layer_training_data, snd_layer_training_data_target], axis=1)
-
-    print("snd_layer_training_data: ", snd_layer_training_data)
-
-    model_dict_sub_l = snd_layer_model_build(snd_layer_dirname, snd_layer_training_data,
+    model_dict_sub_l = snd_layer_model_build(cl_dict, snd_layer_dirname, snd_layer_train_data,
                                              bSaveModel=bSaveModel,
                                              bMetrics=bMetrics,
                                              model_debug=bDebug)
 
-    print("model building done")
-
-    # or bSaveModelDict:
     if bSaveModel:
-        model_c_filepath = dirname + '/' + MODEL_CONSTITUTION_FILENAME
-        cl_dict = load_json(model_c_filepath)
-        cl_dict['snd_layer'] = dict()
-        cl_dict['snd_layer']['models'] = model_dict_sub_l
+        cl_dict[SND_LAYER]['models'] = model_dict_sub_l
+        print("cl_dict: ", cl_dict[SND_LAYER])
 
         with open(model_c_filepath, 'w') as fp:
             json.dump(cl_dict, fp, indent=4)
@@ -326,8 +338,6 @@ def generate_models(strat_dir, strat, layer):
 
     _, dirs, _ = next(os.walk(strat_dir))
     cl_dirname_l = [cl_dir for cl_dir in dirs if cl_dir_prefix in cl_dir]
-    # cl_dirname_l = [cl_dirname_l[0]]  # DEBUG
-    print("cl_dirname_l: ", cl_dirname_l)
 
     bDebug = True
     bMetrics = True

@@ -53,7 +53,7 @@ def upload_results(strat_dir, pred_l):
     pred_live_fp = strat_dir + '/' + FINAL_PRED_LIVE_FILENAME + pred_l_suffix + '.csv'
 
     #pred_method = 'rf'
-    pred_method = 'RandomForest_NeuralNetwork_a_mean_rank'
+    pred_method = 'XGBoost_RandomForest_NeuralNetwork_a_mean_rank'
 
     valid_data = load_predict_file(pred_validation_fp, pred_method)
     test_data = load_predict_file(pred_test_fp, pred_method)

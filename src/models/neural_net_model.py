@@ -181,7 +181,7 @@ class NeuralNetwork(Model):
         train_input, train_target = self._format_input_target(
             balanced_train_data)
         packed_train_ds = self._pack_input_target_ds(
-            train_input, train_target, BATCH_SIZE_TRAIN)
+            train_input, train_target, self.model_params['train_batch_size'])
 
         self.n_features = len(train_input.columns)
 
@@ -203,7 +203,8 @@ class NeuralNetwork(Model):
 
         # , callbacks=[cp_callback])
         # CHOICE epochs 20 ? 30 ?
-        self.model.fit(packed_train_ds, epochs=30)
+        self.model.fit(packed_train_ds,
+                       epochs=self.model_params['num_epoch'])
 
     def evaluate_model(self, test_data):
         test_input, test_target = self._format_input_target(test_data)

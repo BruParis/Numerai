@@ -113,6 +113,39 @@ def aggregate_model_cl_preds(eModel, cl_dict, prob_cl_dict):
     return full_pred_model
 
 
+def rank_fst_proba(fpath, file_w_h, model_types, final_pred_dict, cl_dict, data_t, proba_dict):
+    rank_cl_df = pd.DataFrame()
+    for cl, cl_proba in proba_dict.items():
+        cl_rank = rank_proba(cl_proba, model_types)
+        cl_rank.columns = [cl + '_' + col for col in cl_rank.columns]
+        rank_cl_df = pd.concat([rank_cl_df, cl_rank], axis=1)
+
+    # TODO: aggregate cluster/models with mean methods instead of final_prediction
+    aggr_pred_df = pd.DataFrame()
+    for eModel in model_types:
+        aggr_cl_model_pred = aggregate_model_cl_preds(
+            eModel, cl_dict, proba_dict)
+        aggr_pred_df = pd.concat(
+            [aggr_pred_df, aggr_cl_model_pred], axis=1)
+    aggr_rank_df = rank_proba(aggr_pred_df, model_types)
+
+    # TODO : Move to final_prediction
+    if data_t == VALID_TYPE:
+        for eModel in model_types:
+            if eModel.name not in final_pred_dict.keys():
+                final_pred_dict[eModel.name] = dict()
+
+        models_valid_score(final_pred_dict, model_types, aggr_rank_df)
+
+    full_rank_df = pd.DataFrame()
+    full_rank_df = pd.concat([rank_cl_df, aggr_rank_df], axis=1)
+    print("full_rank_df: ", full_rank_df)
+
+    with open(fpath, 'w') as f:
+        full_rank_df.to_csv(f, header=file_w_h[data_t], index=True)
+        file_w_h[data_t] = False
+
+
 def make_prediction_fst(strat, strat_dir, model_dict, data_types_fp, eras_type_df, model_types):
     # TODO:
     # Full aggregation for all clusters here
@@ -152,6 +185,7 @@ def make_prediction_fst(strat, strat_dir, model_dict, data_types_fp, eras_type_d
             if input_type_data.empty:
                 continue
 
+            proba_batch_dict = {cl: pd.DataFrame() for cl in cl_dict}
             for cl in cl_dict:
                 cl_proba = pred_op.make_cl_predict(input_type_data, cl)
 
@@ -167,36 +201,8 @@ def make_prediction_fst(strat, strat_dir, model_dict, data_types_fp, eras_type_d
 
                 proba_dict[cl] = pd.concat([proba_dict[cl], cl_proba], axis=0)
 
-        rank_cl_df = pd.DataFrame()
-        for cl, cl_proba in proba_dict.items():
-            cl_rank = rank_proba(cl_proba, model_types)
-            cl_rank.columns = [cl + '_' + col for col in cl_rank.columns]
-            rank_cl_df = pd.concat([rank_cl_df, cl_rank], axis=1)
-
-        # TODO: aggregate cluster/models with mean methods instead of final_prediction
-        aggr_pred_df = pd.DataFrame()
-        for eModel in model_types:
-            aggr_cl_model_pred = aggregate_model_cl_preds(
-                eModel, cl_dict, proba_dict)
-            aggr_pred_df = pd.concat(
-                [aggr_pred_df, aggr_cl_model_pred], axis=1)
-        aggr_rank_df = rank_proba(aggr_pred_df, model_types)
-
-        # TODO : Move to final_prediction
-        if data_t == VALID_TYPE:
-            for eModel in model_types:
-                if eModel.name not in final_pred_dict.keys():
-                    final_pred_dict[eModel.name] = dict()
-
-            models_valid_score(final_pred_dict, model_types, aggr_rank_df)
-
-        full_rank_df = pd.DataFrame()
-        full_rank_df = pd.concat([rank_cl_df, aggr_rank_df], axis=1)
-        print("full_rank_df: ", full_rank_df)
-
-        with open(fpath, 'w') as f:
-            full_rank_df.to_csv(f, header=file_w_h[data_t], index=True)
-            file_w_h[data_t] = False
+            rank_fst_proba(fpath, file_w_h, model_types,
+                           final_pred_dict, cl_dict, data_t, proba_dict)
 
 
 def make_prediction_snd(strat, strat_dir, model_dict, data_types_fp, model_types):
@@ -206,10 +212,13 @@ def make_prediction_snd(strat, strat_dir, model_dict, data_types_fp, model_types
             print("fst layer file not found at:", fst_layer_path)
             continue
 
+        print("fst_layer_path: ", fst_layer_path)
         fst_layer_data = load_data(fst_layer_path)
 
-        fst_layer_cl_data = fst_layer_data.loc[:, fst_layer_data.columns.str.startswith(
-            'cluster_')]
+        pred_cols = model_dict[SND_LAYER]['models']['input_columns']
+        print("pred_cols: ", pred_cols)
+        print("fst_layer_data col: ", fst_layer_data.columns)
+        fst_layer_cl_data = fst_layer_data.loc[:, pred_cols]
 
         pred_op = PredictionOperator(
             strat, strat_dir, model_dict, model_types, data_type, bMultiProcess=True)
@@ -219,10 +228,6 @@ def make_prediction_snd(strat, strat_dir, model_dict, data_types_fp, model_types
 
         print('snd_layer_pred_data: ', snd_layer_pred_data)
         print('snd_layer_rank_data: ', snd_layer_rank_data)
-
-        # stitch eras back
-        # snd_layer_pred_data = pd.concat(
-        #     [snd_layer_pred_data, fst_layer_data['era']], axis=1)
 
         with open(snd_layer_path, 'w') as f:
             snd_layer_rank_data.to_csv(f, index=True)
@@ -234,7 +239,6 @@ def make_cluster_predict(strat_dir, strat, cl):
     model_dict = load_json(model_dict_fp)
     eras_type_df = load_eras_data_type()
 
-    # model_types = [ModelType.NeuralNetwork]
     model_types = [ModelType.XGBoost, ModelType.RandomForest,
                    ModelType.NeuralNetwork]
 
@@ -264,15 +268,25 @@ def make_prediction(strat_dir, strat, layer):
     start_time = time.time()
     eras_type_df = load_eras_data_type()
     print("--- %s seconds ---" % (time.time() - start_time))
-    # model_types_fst = [ModelType.NeuralNetwork]
-    model_types_fst = [ModelType.XGBoost, ModelType.RandomForest,
-                       ModelType.NeuralNetwork]
 
     if layer == 'fst':
-        make_prediction_fst(
-            strat, strat_dir, model_dict, data_types_fst_fp, eras_type_df, model_types_fst)
+        # model_types_fst = [ModelType.NeuralNetwork]
+        model_types_fst = [ModelType.XGBoost, ModelType.RandomForest,
+                           ModelType.NeuralNetwork]
+        filename = PREDICTIONS_FILENAME
+        predictions_fst_fp = [strat_dir + '/' + filename +
+                              d_t + PRED_FST_SUFFIX for d_t in PREDICTION_TYPES]
+        data_types_fst_fp = list(zip(PREDICTION_TYPES, predictions_fst_fp))
+        make_prediction_fst(strat, strat_dir, model_dict,
+                            data_types_fst_fp, eras_type_df, model_types_fst)
 
     if layer == 'snd':
+
+        filename = PREDICTIONS_FILENAME
+        predictions_fst_fp = [strat_dir + '/' + filename +
+                              d_t + PRED_FST_SUFFIX for d_t in PREDICTION_TYPES]
+        data_types_fst_fp = list(zip(PREDICTION_TYPES, predictions_fst_fp))
+
         # Snd layer
         pred_snd_fp = [strat_dir + '/' + PREDICTIONS_FILENAME +
                        d_t + PRED_SND_SUFFIX for d_t in PREDICTION_TYPES]

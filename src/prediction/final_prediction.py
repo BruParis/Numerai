@@ -145,8 +145,9 @@ def final_pred(strat_dir, l):
     pred_fp = [strat_dir + '/predictions_tournament_' +
                d_t + pred_suffix for d_t in PREDICTION_TYPES]
     data_types_fp = list(zip(PREDICTION_TYPES, pred_fp))
+
     if COMPUTE_BOOL:
-        compute_model_types = ['RandomForest', 'NeuralNetwork']
+        compute_model_types = ['XGBoost', 'RandomForest', 'NeuralNetwork']
         method = ARITHM_MEAN_RANK
         compute_final_pred(
             strat_dir, data_types_fp, compute_model_types, method)

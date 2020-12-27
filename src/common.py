@@ -32,7 +32,7 @@ COL_PROBA_NAMES = ['proba_0.0', 'proba_0.25',
                    'proba_0.5', 'proba_0.75', 'proba_1.0']
 
 FST_LAYER_TRAIN_RATIO = 0.20
-TEST_RATIO = 0.20
+TEST_RATIO = 0.10
 
 # era_ft_corr
 ERAS_FT_T_CORR_FP = DATA_DIRNAME + '/eras_ft_target_corr.csv'
@@ -53,6 +53,8 @@ SND_LAYER_FILENAME = 'snd_layer_training_data.csv'
 TOURNAMENT_DATA_FP = DATA_DIRNAME + '/numerai_tournament_data.csv'
 TOURNAMENT_STORE_H5_FP = DATA_DIRNAME + '/tournament_store.h5'
 PREDICTIONS_FILENAME = 'predictions_tournament_'
+PRED_TRAIN_FILENAME = 'predictions_training_data.csv'
+PROBA_FILENAME = 'proba_tournament_'
 FINAL_PREDICT_FILENAME = 'final_predict_'
 FINAL_PRED_VALID_FILENAME = 'final_predict_validation'
 FINAL_PRED_LIVE_FILENAME = 'final_predict_live'

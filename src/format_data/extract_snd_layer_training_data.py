@@ -23,31 +23,6 @@ def load_data():
     return data_df
 
 
-def load_data_matching_id(list_id):
-    file_reader = ReaderCSV(TRAINING_DATA_FP)
-    data_df = file_reader.read_csv_filter_id(list_id).set_index("id")
-
-    return data_df
-
-
-def load_data_snd_layer(cl_dirname):
-    snd_layer_fp = cl_dirname + '/' + DATA_LAYER_FILENAME
-    file_reader = ReaderCSV(snd_layer_fp)
-    data_df = file_reader.read_csv().set_index("id")
-
-    print("data_df: ", data_df)
-    data_df = data_df[data_df['fst_layer'] == False]
-
-    return data_df
-
-
-def write_file(filepath, data):
-
-    print("write file: ", filepath)
-    with open(filepath, 'w') as f:
-        data.to_csv(f)
-
-
 def snd_layer_training_data(strat):
 
     cl_dirname = ERA_CL_DIRNAME if strat == "cluster" else ERA_GRAPH_DIRNAME
@@ -63,11 +38,6 @@ def snd_layer_training_data(strat):
     model_dict_fp = cl_dirname + '/' + MODEL_CONSTITUTION_FILENAME
     model_dict = load_json(model_dict_fp)
 
-    snd_layer_data_id = load_data_snd_layer(cl_dirname)
-
-    print("snd_layer_data_id.index: ", snd_layer_data_id.index)
-
-    # snd_layer_data = load_data_matching_id(snd_layer_data_id.index)
     snd_layer_data = load_data()
 
     print("snd_layer_data: ", snd_layer_data)
@@ -89,41 +59,18 @@ def snd_layer_training_data(strat):
         # CHOICE
         # predict snd layer training data with fst layer as whole era
         proba_cl = pred_op_fst_layer.make_cl_predict(snd_layer_data, cl)
-        proba_cl.columns = [cl + '_' + col for col in proba_cl.columns]
 
-        pred_cl = rank_proba(proba_cl, model_types_fst)
+        rank_cl = rank_proba(proba_cl, model_types_fst)
 
-        pred_cl.columns = [cl + '_' + col for col in pred_cl.columns]
+        rank_cl.columns = [cl + '_' + col for col in rank_cl.columns]
+        pred_full_data = pd.concat([pred_full_data, rank_cl], axis=1)
 
-        pred_cl_full_data = pd.concat([proba_cl, pred_cl], axis=1)
+    pred_full_data = pd.concat(
+        [pred_full_data, snd_layer_data[TARGET_LABEL]], axis=1)
+    pred_training_data_fp = cl_dirname + '/' + PRED_TRAIN_FILENAME
 
-        pred_full_data = pd.concat([pred_full_data, pred_cl_full_data], axis=1)
-
-    trian_pred_data = pred_full_data.iloc[snd_layer_data_id.index]
-
-    # snd layer predict era by era from fst layer predict data
-    # pred_fst_layer_data = []
-    # eras_list = snd_layer_data['era'].drop_duplicates().values
-    # print("eras_df: ", eras_list)
-    # for era in eras_list:
-    #     print('era: ', era)
-    #    era_snd_layer_data = snd_layer_data.loc[snd_layer_data['era'] == era]
-    #    era_pred_data = pred_op_fst_layer.make_fst_layer_predict(
-    #        era_snd_layer_data)
-    #    era_pred_data['era'] = era
-    #    pred_fst_layer_data.append(era_pred_data)
-    # pred_fst_layer_full_data = pd.concat(pred_fst_layer_data)
-
-    # =================================================================
-    # snd layer predict from full fst layer predict data
-    # pred_fst_layer_full_data = pred_op_fst_layer.make_fst_layer_predict(
-    #     snd_layer_data)
-    # pred_fst_layer_full_data = pd.concat(
-    #     [snd_layer_data['era'], pred_fst_layer_full_data], axis=1)
-    # =================================================================
-
-    snd_layer_training_data_filepath = snd_layer_dirpath + '/' + SND_LAYER_FILENAME
-    write_file(snd_layer_training_data_filepath, trian_pred_data)
+    with open(pred_training_data_fp, 'w') as f:
+        pred_full_data.to_csv(f)
 
     with open(model_dict_fp, 'w') as fp:
         json.dump(model_dict, fp, indent=4)
