@@ -5,7 +5,7 @@ import pandas as pd
 from reader import ReaderCSV
 
 from models import Model, ModelType
-from prediction import PredictionOperator, rank_proba
+from prediction import PredictionOperator, rank_proba, proba_to_target_label
 from common import *
 
 
@@ -60,10 +60,15 @@ def snd_layer_training_data(strat):
         # predict snd layer training data with fst layer as whole era
         proba_cl = pred_op_fst_layer.make_cl_predict(snd_layer_data, cl)
 
-        rank_cl = rank_proba(proba_cl, model_types_fst)
+        mod_pred_cl = proba_to_target_label(proba_cl, model_types_fst)
 
-        rank_cl.columns = [cl + '_' + col for col in rank_cl.columns]
-        pred_full_data = pd.concat([pred_full_data, rank_cl], axis=1)
+        mod_pred_cl.columns = [cl + '_' + col for col in mod_pred_cl.columns]
+        pred_full_data = pd.concat([pred_full_data, mod_pred_cl], axis=1)
+
+        #rank_cl = rank_proba(proba_cl, model_types_fst)
+
+        #rank_cl.columns = [cl + '_' + col for col in rank_cl.columns]
+        #pred_full_data = pd.concat([pred_full_data, rank_cl], axis=1)
 
     pred_full_data = pd.concat(
         [pred_full_data, snd_layer_data[TARGET_LABEL]], axis=1)

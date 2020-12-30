@@ -8,7 +8,7 @@ from reader import ReaderCSV, load_h5_eras
 from models import ModelType, ModelConstitution
 from prediction import PredictionOperator, ranking
 from corr_analysis import models_valid_score
-from .ranking import rank_proba
+from .ranking import rank_proba, proba_to_target_label
 
 ERA_BATCH_SIZE = 32
 # ERA_BATCH_SIZE = 2
@@ -115,10 +115,20 @@ def aggregate_model_cl_preds(eModel, cl_dict, prob_cl_dict):
 
 def rank_fst_proba(fpath, file_w_h, model_types, final_pred_dict, cl_dict, data_t, proba_dict):
     rank_cl_df = pd.DataFrame()
+    label_cl_df = pd.DataFrame()
     for cl, cl_proba in proba_dict.items():
         cl_rank = rank_proba(cl_proba, model_types)
         cl_rank.columns = [cl + '_' + col for col in cl_rank.columns]
         rank_cl_df = pd.concat([rank_cl_df, cl_rank], axis=1)
+
+        # classify with target label for snd layer
+        cl_label = proba_to_target_label(cl_proba, model_types)
+        cl_label.columns = [cl + '_' + col for col in cl_label.columns]
+        label_cl_df = pd.concat([label_cl_df, cl_label], axis=1)
+
+    fpath_label = fpath.replace('predictions_', 'pred_label_')
+    with open(fpath_label, 'w') as f:
+        label_cl_df.to_csv(f, header=file_w_h[data_t], index=True)
 
     # TODO: aggregate cluster/models with mean methods instead of final_prediction
     aggr_pred_df = pd.DataFrame()
@@ -185,7 +195,6 @@ def make_prediction_fst(strat, strat_dir, model_dict, data_types_fp, eras_type_d
             if input_type_data.empty:
                 continue
 
-            proba_batch_dict = {cl: pd.DataFrame() for cl in cl_dict}
             for cl in cl_dict:
                 cl_proba = pred_op.make_cl_predict(input_type_data, cl)
 
@@ -218,6 +227,7 @@ def make_prediction_snd(strat, strat_dir, model_dict, data_types_fp, model_types
         pred_cols = model_dict[SND_LAYER]['models']['input_columns']
         print("pred_cols: ", pred_cols)
         print("fst_layer_data col: ", fst_layer_data.columns)
+        print("fst_layer_data: ", fst_layer_data)
         fst_layer_cl_data = fst_layer_data.loc[:, pred_cols]
 
         pred_op = PredictionOperator(
@@ -283,7 +293,9 @@ def make_prediction(strat_dir, strat, layer):
     if layer == 'snd':
 
         filename = PREDICTIONS_FILENAME
-        predictions_fst_fp = [strat_dir + '/' + filename +
+
+        filename_label = filename.replace('predictions_', 'pred_label_')
+        predictions_fst_fp = [strat_dir + '/' + filename_label +
                               d_t + PRED_FST_SUFFIX for d_t in PREDICTION_TYPES]
         data_types_fst_fp = list(zip(PREDICTION_TYPES, predictions_fst_fp))
 

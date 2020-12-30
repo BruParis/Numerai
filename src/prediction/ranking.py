@@ -4,6 +4,31 @@ from common import *
 from models import ModelType
 
 
+def proba_to_target_label(proba, models):
+    res = pd.DataFrame()
+    for eModel in models:
+
+        model_name = eModel.name
+        model_proba = proba.loc[:, proba.columns.str.startswith(model_name)]
+
+        if model_proba is None:
+            continue
+
+        proba_to_target_classes = dict(
+            zip(model_proba.columns, TARGET_CLASSES))
+        model_proba = model_proba.rename(columns=proba_to_target_classes)
+
+        pred_df = model_proba.idxmax(axis=1)
+        pred_df = pred_df.rename(eModel.name)
+
+        res = pd.concat([res, pred_df], axis=1)
+
+    if 'era' in proba.columns:
+        res = pd.concat([res, proba.loc[:, 'era']], axis=1)
+
+    return res
+
+
 def rank_proba(proba, models):
     res = pd.DataFrame()
     for eModel in models:
