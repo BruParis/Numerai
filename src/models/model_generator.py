@@ -62,7 +62,6 @@ class ModelGenerator():
                                     self.model_params, model_debug=debug)
 
     def build_evaluate_model(self, train_data, test_data, debug=False):
-        print("self.model_type.name: ", self.model_type.name)
         self.model.build_model(train_data)
 
         model_dict = dict()
@@ -85,3 +84,15 @@ class ModelGenerator():
         model_dict['accuracy_score'] = accuracy_score
 
         return self.model, model_dict
+    
+    def evaluate_model(self, valid_data, model_dict):
+        log_loss, accuracy_score = self.model.evaluate_model(valid_data)
+
+        if 'validation' not in model_dict.keys():
+            model_dict['validation'] = dict() 
+
+        model_dict_valid = model_dict['validation']
+        model_dict_valid['log_loss'] = log_loss
+        model_dict_valid['accuracy_score'] = accuracy_score
+
+        return 

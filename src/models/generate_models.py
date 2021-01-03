@@ -29,6 +29,12 @@ def load_data(data_filename):
     return data_df
 
 
+def load_data_type(data_fp, data_types):
+    file_reader = ReaderCSV(data_fp)
+    input_data = file_reader.read_csv_matching('data_type', data_types).set_index('id')
+
+    return input_data
+
 def load_json(filepath):
     with open(filepath, 'r') as f:
         json_data = json.load(f)
@@ -59,7 +65,7 @@ def make_fst_layer_model_params(eModel, model_prefix=None):
     if eModel == ModelType.NeuralNetwork:
         num_layers = [1]  # np.linspace(start=1, stop=4, num=1)
         layer_size_factor = [0.66]
-        train_batch_size = [1000]
+        train_batch_size = [50]
         num_epoch = [30]
         model_params_array = map(
             lambda x: {'num_layers': int(x[0]), 'size_factor': float(x[1]),
@@ -131,12 +137,15 @@ def make_model_prefix(eModel):
 
 def cl_model_build(dirname, cl, bSaveModel=False, bMetrics=False, model_debug=False):
 
+
     cl_dirpath = dirname + '/' + cl
     train_filepath = cl_dirpath + '/' + 'training_data.csv'
     test_filepath = cl_dirpath + '/' + 'test_data.csv'
 
     train_data = load_data(train_filepath)
     test_data = load_data(test_filepath)
+
+    #valid_data = load_data_type(TOURNAMENT_DATA_FP, [VALID_TYPE])
 
     # bMultiProc = False
     # if bMultiProc:
@@ -148,8 +157,11 @@ def cl_model_build(dirname, cl, bSaveModel=False, bMetrics=False, model_debug=Fa
     # else:
 
     # model_types = ModelType
+    # model_types = [ModelType.NeuralNetwork]
+    # model_types = [ModelType.XGBoost, ModelType.RandomForest,
+    #                ModelType.NeuralNetwork]  # , ModelType.K_NN]
     model_types = [ModelType.XGBoost, ModelType.RandomForest,
-                   ModelType.NeuralNetwork]  # , ModelType.K_NN]
+                   ModelType.NeuralNetwork]
 
     model_generator = ModelGenerator(cl_dirpath)
 
@@ -171,6 +183,8 @@ def cl_model_build(dirname, cl, bSaveModel=False, bMetrics=False, model_debug=Fa
                     train_data, test_data)
 
                 log_loss, _ = model_dict['log_loss'], model_dict['accuracy_score']
+
+                #model_generator.evaluate_model(valid_data, model_dict)
 
                 if bSaveModel and (log_loss < best_ll):
                     best_ll = log_loss

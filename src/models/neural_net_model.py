@@ -1,103 +1,18 @@
 from .model_abstract import Model, ModelType
 from reader import ReaderCSV
 from common import *
+import keras
 import sklearn.metrics as sm
 import pandas as pd
 import numpy as np
-import tensorflow as tf
 import math
 import json
 import functools
 
-
-BATCH_SIZE_TRAIN = 1000
 BATCH_SIZE_PREDICT = 1000
 
 
-class PackNumericFeaturesLabels(object):
-    def __init__(self, names, label_values):
-        self.names = names
-        self.label_values = label_values
-
-    def __call__(self, features, labels):
-        numeric_features = [features.pop(name) for name in self.names]
-        numeric_features = [tf.cast(feat, tf.float32)
-                            for feat in numeric_features]
-        numeric_features = tf.stack(numeric_features, axis=-1)
-        input_features = {'input': numeric_features}
-
-        # numeric_features = [tf.cast(feat, tf.float32)
-        #                     for feat in features]
-        # numeric_features = tf.stack(numeric_features, axis=-1)
-
-        labels_multiclass = [tf.map_fn(lambda x: tf.cast(
-            tf.math.equal(x[0], v), tf.float32), labels) for v in range(len(self.label_values))]
-        labels_multiclass = tf.stack(labels_multiclass, axis=-1)
-
-        # labels = tf.map_fn(lambda x: tf.cast(
-        #     self._label_array(x), tf.float32), labels)
-
-        return input_features, labels_multiclass
-
-
-class PackNumericFeatures(object):
-    def __init__(self, names):
-        self.names = names
-
-    # @tf.autograph.experimental.do_not_convert
-    def __call__(self, features):
-        numeric_features = [features.pop(name) for name in self.names]
-        numeric_features = [tf.cast(feat, tf.float32)
-                            for feat in numeric_features]
-        numeric_features = tf.stack(numeric_features, axis=-1)
-        input_features = {'input': numeric_features}
-
-        return input_features
-
-
 class NeuralNetwork(Model):
-
-    def _show_batch(self, dataset):
-        print("_show_batch - dataset: ", dataset)
-        for batch, label, in dataset.take(1):
-            print("batch: ", batch)
-            print("label: ", label)
-
-    def _pack_input_target_ds(self, input_df, target_df, batch_size=None):
-
-        # if shuffle
-        # dataset = dataset.shuffle(buffer_size=len(input_df))
-
-        input_labels = input_df.columns.values
-
-        dataset = tf.data.Dataset.from_tensor_slices(
-            (dict(input_df), target_df))
-
-        if batch_size is not None:
-            dataset = dataset.batch(batch_size)
-
-        packed_ds = dataset.map(
-            PackNumericFeaturesLabels(input_labels, TARGET_VALUES))
-
-        # self._show_batch(packed_ds)
-
-        return packed_ds
-
-    def _pack_input_ds(self, input_df, batch_size=None):
-
-        input_labels = input_df.columns.values
-
-        dataset = tf.data.Dataset.from_tensor_slices(dict(input_df))
-
-        if batch_size is not None:
-            dataset = dataset.batch(batch_size)
-
-        packed_ds = dataset.map(
-            PackNumericFeatures(input_labels))
-
-        # self._show_batch(packed_ds)
-
-        return packed_ds
 
     def _normalize_numeric_data(self, data, mean, std):
         return (data-mean)/std
@@ -105,29 +20,30 @@ class NeuralNetwork(Model):
     def _generate_layers_array(self):
 
         # NORMALIZE DATA -> produce mean and std from training data if necessary (?)
-        MEAN = [0.50 for i in range(self.n_features)]
-        STD = [-0.33 for i in range(self.n_features)]
-        normalizer = functools.partial(
-            self._normalize_numeric_data, mean=MEAN, std=STD)
+        # MEAN = [0.50 for i in range(self.n_features)]
+        # STD = [-0.33 for i in range(self.n_features)]
+        # normalizer = functools.partial(
+        #    self._normalize_numeric_data, mean=MEAN, std=STD)
 
-        numeric_columns = tf.feature_column.numeric_column(
-            'input', normalizer_fn=normalizer, shape=[self.n_features])
         # numeric_columns = tf.feature_column.numeric_column(
-        #     'input', shape=[self.n_features])
+        #    'input', normalizer_fn=normalizer, shape=[self.n_features])
 
-        input_layer = tf.keras.layers.DenseFeatures(numeric_columns)
+        # input_layer = keras.layers.DenseFeatures(numeric_columns)
 
         layers_size = [int(self.n_features * math.pow(self.model_params['size_factor'], i))
                        for i in range(1, self.model_params['num_layers']+1)]
 
         # use gelu instead of relu?
-        dense_layers_tuple = [[tf.keras.layers.Dense(size, activation='relu'),
-                               tf.keras.layers.Dropout(.2)] for size in layers_size]
+        dense_layers_tuple = [[keras.layers.Dense(size, activation='relu'),
+                               keras.layers.Dropout(.2)] for size in layers_size]
         dense_layers = [
             layer for layer_tuple in dense_layers_tuple for layer in layer_tuple]
 
-        full_layers = [input_layer] + dense_layers + [tf.keras.layers.Dense(
-            len(TARGET_VALUES), activation='softmax', name='output')]
+        output_layers = [keras.layers.Dense(len(TARGET_VALUES), activation='softmax', name='output')]
+
+        # full_layers = [input_layer] + dense_layers + [keras.layers.Dense(
+        #     len(TARGET_VALUES), activation='softmax', name='output')]
+        full_layers = dense_layers + output_layers
 
         return full_layers
 
@@ -135,7 +51,7 @@ class NeuralNetwork(Model):
         Model.__init__(self, ModelType.NeuralNetwork,
                        dirname, model_params, debug, filename)
 
-    def oversampling(self, train_data):
+    def _oversampling(self, train_data):
         # TODO : balance classes
         sampling_dict = {
             t: len(train_data.loc[train_data[TARGET_LABEL] == t].index) for t in TARGET_VALUES}
@@ -168,6 +84,17 @@ class NeuralNetwork(Model):
 
         return res
 
+    def _generate_target_labels(self, target_df):
+        for v in TARGET_VALUES:
+            target_df[v] = target_df.apply(
+                lambda x: 1.0 if x[('target')] == v * TARGET_FACT_NUMERIC
+                else 0.0, axis=1)
+        print("target_df: ", target_df)
+
+        train_t_labels = target_df.loc[:, TARGET_VALUES]
+
+        return train_t_labels
+
     def build_model(self, train_data):
         if train_data is None:
             print("No train data provided!")
@@ -176,12 +103,18 @@ class NeuralNetwork(Model):
         if self.debug:
             print("model params: ", self.model_params)
 
-        balanced_train_data = self.oversampling(train_data)
+        print("Neural Net KERAS - build model")
+
+        balanced_train_data = self._oversampling(train_data)
 
         train_input, train_target = self._format_input_target(
             balanced_train_data)
-        packed_train_ds = self._pack_input_target_ds(
-            train_input, train_target, self.model_params['train_batch_size'])
+
+        print("train_target: ", train_target)
+        train_t_labels = self._generate_target_labels(train_target)
+
+        # packed_train_ds = self._pack_input_target_ds(
+        #     train_input, train_target, self.model_params['train_batch_size'])
 
         self.n_features = len(train_input.columns)
 
@@ -189,10 +122,10 @@ class NeuralNetwork(Model):
         # need implement model structure with model_params
         # BUILD MODEL - TRAIN, EVALUATE
         full_layers = self._generate_layers_array()
-        self.model = tf.keras.Sequential(full_layers)
+        self.model = keras.Sequential(full_layers)
 
         self.model.compile(
-            loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+            loss=keras.losses.CategoricalCrossentropy(from_logits=True),
             optimizer='adam',
             metrics=['accuracy']
         )
@@ -203,18 +136,19 @@ class NeuralNetwork(Model):
 
         # , callbacks=[cp_callback])
         # CHOICE epochs 20 ? 30 ?
-        self.model.fit(packed_train_ds,
-                       epochs=self.model_params['num_epoch'])
+        # self.model.fit(packed_train_ds, epochs=self.model_params['num_epoch'])
+        print("train_batch_size: ", self.model_params['train_batch_size'])
+        self.model.fit(x=train_input, batch_size=self.model_params['train_batch_size'],
+                        y=train_t_labels, epochs=self.model_params['num_epoch'])
 
     def evaluate_model(self, test_data):
         test_input, test_target = self._format_input_target(test_data)
-        packed_test_input_target_ds = self._pack_input_target_ds(
-            test_input, test_target, BATCH_SIZE_PREDICT)
+        test_t_labels = self._generate_target_labels(test_target)
 
         test_target['prediction'] = self.predict(test_input)
 
         test_loss, test_accuracy = self.model.evaluate(
-            packed_test_input_target_ds)
+            x=test_input, y=test_t_labels)
         if self.debug:
             print('\n\nTest Loss {}, Test Accuracy {}'.format(
                 test_loss, test_accuracy))
@@ -245,9 +179,11 @@ class NeuralNetwork(Model):
         return prediction
 
     def predict_proba(self, data_input):
-        packed_input_ds = self._pack_input_ds(data_input, BATCH_SIZE_PREDICT)
-        prediction_proba = self.model.predict(
-            packed_input_ds, batch_size=BATCH_SIZE_PREDICT)
+        #packed_input_ds = self._pack_input_ds(data_input, BATCH_SIZE_PREDICT)
+        # prediction_proba = self.model.predict(
+        #     packed_input_ds, batch_size=BATCH_SIZE_PREDICT)
+        print("data_input: ", data_input)
+        prediction_proba = self.model.predict(data_input)
 
         # check if proba sum up to 1 -> softmax funct. as output
         # proba_sum = prediction_proba.sum(axis=1)
@@ -267,5 +203,5 @@ class NeuralNetwork(Model):
         self._load_model_config()
 
         full_layers = self._generate_layers_array()
-        self.model = tf.keras.Sequential(full_layers)
+        self.model = keras.Sequential(full_layers)
         self.model.load_weights(self.filepath)

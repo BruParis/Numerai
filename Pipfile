@@ -14,11 +14,13 @@ matplotlib = "*"
 sklearn = "*"
 tqdm = "*"
 networkx = "*"
-tensorflow = "*" # -> pipenv has pb installing ts on aws instances
 xgboost = "*"
 numerapi = "*"
 seaborn = "*"
 pylint = "*"
+keras = "*"
+tensorflow = "*"
+tables = "*"
 
 [requires]
 python_version = "3.8"
