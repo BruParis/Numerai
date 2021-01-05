@@ -6,9 +6,8 @@ import time
 from common import *
 from reader import ReaderCSV, load_h5_eras
 from models import ModelType, ModelConstitution
-from prediction import PredictionOperator, ranking
-from corr_analysis import models_valid_score
-from .ranking import rank_proba, proba_to_target_label
+from prediction import PredictionOperator
+from data_analysis import models_valid_score, proba_to_target_label, rank_proba_models
 
 ERA_BATCH_SIZE = 32
 # ERA_BATCH_SIZE = 2
@@ -31,8 +30,8 @@ def load_eras_data_type():
 
 def load_input_data(era_target):
     file_reader = ReaderCSV(TOURNAMENT_DATA_FP)
-    input_data = file_reader.read_csv_matching(
-        'era', era_target).set_index('id')
+    input_data = file_reader.read_csv_matching('era',
+                                               era_target).set_index('id')
 
     return input_data
 
@@ -54,8 +53,8 @@ def measure_cl_pred_valid_corr(model_dict, cl, model_types, cl_pred):
     models_valid_score(cl_models_dict, model_types, cl_pred)
 
 
-def single_cluster_pred(strat, strat_dir, model_dict, model_types, data_types_fp,
-                        eras_type_df, cl):
+def single_cluster_pred(strat, strat_dir, model_dict, model_types,
+                        data_types_fp, eras_type_df, cl):
 
     for data_t, fpath in data_types_fp:
         eras_df = eras_type_df.loc[eras_type_df['data_type'] == data_t]
@@ -64,8 +63,12 @@ def single_cluster_pred(strat, strat_dir, model_dict, model_types, data_types_fp
         eras_batches = list_chunks(
             eras_list) if data_t is not VALID_TYPE else [eras_list]
 
-        pred_op = PredictionOperator(
-            strat, strat_dir, model_dict, model_types, data_t, bMultiProcess=False)
+        pred_op = PredictionOperator(strat,
+                                     strat_dir,
+                                     model_dict,
+                                     model_types,
+                                     data_t,
+                                     bMultiProcess=False)
 
         cl_proba_batches = pd.DataFrame()
 
@@ -80,7 +83,8 @@ def single_cluster_pred(strat, strat_dir, model_dict, model_types, data_types_fp
             print("--- %s seconds ---" % (time.time() - start_time))
 
             input_data_era = input_data.loc[input_data['era'].isin(era_b)]
-            input_type_data = input_data_era.loc[input_data_era['data_type'] == data_t]
+            input_type_data = input_data_era.loc[input_data_era['data_type'] ==
+                                                 data_t]
 
             if input_type_data.empty:
                 continue
@@ -90,7 +94,7 @@ def single_cluster_pred(strat, strat_dir, model_dict, model_types, data_types_fp
             cl_proba_batches = pd.concat([cl_proba_batches, pred_cl], axis=0)
 
         print("cl_proba_batches: ", cl_proba_batches)
-        cl_rank = rank_proba(cl_proba_batches, model_types)
+        cl_rank = rank_proba_models(cl_proba_batches, model_types)
 
         if data_t == VALID_TYPE:
             measure_cl_pred_valid_corr(model_dict, cl, model_types, cl_rank)
@@ -100,30 +104,36 @@ def single_cluster_pred(strat, strat_dir, model_dict, model_types, data_types_fp
 
 
 def aggregate_model_cl_preds(eModel, cl_dict, prob_cl_dict):
-    model_prob_dict = {cl: proba.loc[:, proba.columns.str.startswith(
-        eModel.name)] for cl, proba in prob_cl_dict.items()}
-    cl_v_corr_d = {cl: cl_dict[cl]['models'][eModel.name]
-                   ['valid_score']['valid_corr_mean']
-                   for cl in model_prob_dict.keys()}
-    cl_w_d = {cl: cl_v_corr for cl,
-              cl_v_corr in cl_v_corr_d.items() if cl_v_corr > 0}
+    model_prob_dict = {
+        cl: proba.loc[:, proba.columns.str.startswith(eModel.name)]
+        for cl, proba in prob_cl_dict.items()
+    }
+    cl_v_corr_d = {
+        cl:
+        cl_dict[cl]['models'][eModel.name]['valid_score']['valid_corr_mean']
+        for cl in model_prob_dict.keys()
+    }
+    cl_w_d = {
+        cl: cl_v_corr
+        for cl, cl_v_corr in cl_v_corr_d.items() if cl_v_corr > 0
+    }
     total_w = sum([w for cl, w in cl_w_d.items()])
     print("pred_cl_dict: ", model_prob_dict)
-    full_pred_model = sum(
-        model_prob_dict[cl] * cl_w for cl, cl_w in cl_w_d.items()) / total_w
+    full_pred_model = sum(model_prob_dict[cl] * cl_w
+                          for cl, cl_w in cl_w_d.items()) / total_w
     return full_pred_model
 
 
-def rank_fst_proba(fpath, file_w_h, model_types, final_pred_dict, cl_dict, data_t, proba_dict):
+def rank_fst_proba(fpath, file_w_h, model_types, final_pred_dict, cl_dict,
+                   data_t, proba_dict):
 
     # TODO: aggregate cluster/models with mean methods instead of final_prediction
     aggr_pred_df = pd.DataFrame()
     for eModel in model_types:
-        aggr_cl_model_pred = aggregate_model_cl_preds(
-            eModel, cl_dict, proba_dict)
-        aggr_pred_df = pd.concat(
-            [aggr_pred_df, aggr_cl_model_pred], axis=1)
-    aggr_rank_df = rank_proba(aggr_pred_df, model_types)
+        aggr_cl_model_pred = aggregate_model_cl_preds(eModel, cl_dict,
+                                                      proba_dict)
+        aggr_pred_df = pd.concat([aggr_pred_df, aggr_cl_model_pred], axis=1)
+    aggr_rank_df = rank_proba_models(aggr_pred_df, model_types)
 
     # TODO : Move to final_prediction
     if COMPUTE_BOOL and data_t == VALID_TYPE:
@@ -143,7 +153,8 @@ def rank_fst_proba(fpath, file_w_h, model_types, final_pred_dict, cl_dict, data_
         file_w_h[data_t] = False
 
 
-def make_prediction_fst(strat, strat_dir, model_dict, data_types_fp, eras_type_df, model_types):
+def make_prediction_fst(strat, strat_dir, model_dict, data_types_fp,
+                        eras_type_df, model_types):
     # TODO:
     # Full aggregation for all clusters here
     # -> make version for specific combinaison + aggregation methods
@@ -163,8 +174,12 @@ def make_prediction_fst(strat, strat_dir, model_dict, data_types_fp, eras_type_d
         eras_batches = list_chunks(
             eras_list) if data_t is not VALID_TYPE else [eras_list]
 
-        pred_op = PredictionOperator(
-            strat, strat_dir, model_dict, model_types, data_t, bMultiProcess=False)
+        pred_op = PredictionOperator(strat,
+                                     strat_dir,
+                                     model_dict,
+                                     model_types,
+                                     data_t,
+                                     bMultiProcess=False)
 
         proba_dict = {cl: pd.DataFrame() for cl in cl_dict}
         for era_b in eras_batches:
@@ -178,7 +193,8 @@ def make_prediction_fst(strat, strat_dir, model_dict, data_types_fp, eras_type_d
             print("--- %s seconds ---" % (time.time() - start_time))
 
             input_data_era = input_data.loc[input_data['era'].isin(era_b)]
-            input_type_data = input_data_era.loc[input_data_era['data_type'] == data_t]
+            input_type_data = input_data_era.loc[input_data_era['data_type'] ==
+                                                 data_t]
 
             if input_type_data.empty:
                 continue
@@ -187,10 +203,10 @@ def make_prediction_fst(strat, strat_dir, model_dict, data_types_fp, eras_type_d
                 cl_proba = pred_op.make_cl_predict(input_type_data, cl)
 
                 if not COMPUTE_BOOL:
-                    cl_rank = rank_proba(cl_proba, model_types)
+                    cl_rank = rank_proba_models(cl_proba, model_types)
                     if data_t == VALID_TYPE:
-                        measure_cl_pred_valid_corr(
-                            model_dict, cl, model_types, cl_rank)
+                        measure_cl_pred_valid_corr(model_dict, cl, model_types,
+                                                   cl_rank)
 
                     pred_fp = strat_dir + '/' + cl + '/' + PREDICTIONS_FILENAME + data_t + '.csv'
                     with open(pred_fp, 'w') as f:
@@ -198,11 +214,12 @@ def make_prediction_fst(strat, strat_dir, model_dict, data_types_fp, eras_type_d
 
                 proba_dict[cl] = pd.concat([proba_dict[cl], cl_proba], axis=0)
 
-        rank_fst_proba(fpath, file_w_h, model_types,
-                       final_pred_dict, cl_dict, data_t, proba_dict)
+        rank_fst_proba(fpath, file_w_h, model_types, final_pred_dict, cl_dict,
+                       data_t, proba_dict)
 
 
-def make_prediction_snd(strat, strat_dir, model_dict, data_types_fp, model_types):
+def make_prediction_snd(strat, strat_dir, model_dict, data_types_fp,
+                        model_types):
     for data_type, fst_layer_path, snd_layer_path in data_types_fp:
 
         if not os.path.exists(fst_layer_path):
@@ -218,11 +235,16 @@ def make_prediction_snd(strat, strat_dir, model_dict, data_types_fp, model_types
         print("fst_layer_data: ", fst_layer_data)
         fst_layer_cl_data = fst_layer_data.loc[:, pred_cols]
 
-        pred_op = PredictionOperator(
-            strat, strat_dir, model_dict, model_types, data_type, bMultiProcess=True)
+        pred_op = PredictionOperator(strat,
+                                     strat_dir,
+                                     model_dict,
+                                     model_types,
+                                     data_type,
+                                     bMultiProcess=True)
 
         snd_layer_pred_data = pred_op.make_snd_layer_predict(fst_layer_cl_data)
-        snd_layer_rank_data = rank_proba(snd_layer_pred_data, model_types)
+        snd_layer_rank_data = rank_proba_models(snd_layer_pred_data,
+                                                model_types)
 
         print('snd_layer_pred_data: ', snd_layer_pred_data)
         print('snd_layer_rank_data: ', snd_layer_rank_data)
@@ -237,17 +259,20 @@ def make_cluster_predict(strat_dir, strat, cl):
     model_dict = load_json(model_dict_fp)
     eras_type_df = load_eras_data_type()
 
-    model_types = [ModelType.XGBoost, ModelType.RandomForest,
-                   ModelType.NeuralNetwork]
+    model_types = [
+        ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
+    ]
     # model_types = [ModelType.NeuralNetwork]
 
     cl_dir = strat_dir + '/' + cl
-    pred_fp = [cl_dir + '/' + PREDICTIONS_FILENAME + d_t +
-               '.csv' for d_t in PREDICTION_TYPES]
+    pred_fp = [
+        cl_dir + '/' + PREDICTIONS_FILENAME + d_t + '.csv'
+        for d_t in PREDICTION_TYPES
+    ]
     data_types_fp = list(zip(PREDICTION_TYPES, pred_fp))
 
-    single_cluster_pred(strat, strat_dir, model_dict, model_types, data_types_fp,
-                        eras_type_df, cl)
+    single_cluster_pred(strat, strat_dir, model_dict, model_types,
+                        data_types_fp, eras_type_df, cl)
 
     with open(model_dict_fp, 'w') as fp:
         json.dump(model_dict, fp, indent=4)
@@ -260,8 +285,10 @@ def make_prediction(strat_dir, strat, layer):
     model_dict = load_json(model_dict_fp)
 
     # Fst layer
-    predictions_fst_fp = [strat_dir + '/' + PREDICTIONS_FILENAME +
-                          d_t + PRED_FST_SUFFIX for d_t in PREDICTION_TYPES]
+    predictions_fst_fp = [
+        strat_dir + '/' + PREDICTIONS_FILENAME + d_t + PRED_FST_SUFFIX
+        for d_t in PREDICTION_TYPES
+    ]
     data_types_fst_fp = list(zip(PREDICTION_TYPES, predictions_fst_fp))
 
     start_time = time.time()
@@ -270,35 +297,43 @@ def make_prediction(strat_dir, strat, layer):
 
     if layer == 'fst':
         # model_types_fst = [ModelType.NeuralNetwork]
-        model_types_fst = [ModelType.XGBoost, ModelType.RandomForest,
-                           ModelType.NeuralNetwork]
+        model_types_fst = [
+            ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
+        ]
         filename = PREDICTIONS_FILENAME
-        predictions_fst_fp = [strat_dir + '/' + filename +
-                              d_t + PRED_FST_SUFFIX for d_t in PREDICTION_TYPES]
+        predictions_fst_fp = [
+            strat_dir + '/' + filename + d_t + PRED_FST_SUFFIX
+            for d_t in PREDICTION_TYPES
+        ]
         data_types_fst_fp = list(zip(PREDICTION_TYPES, predictions_fst_fp))
-        make_prediction_fst(strat, strat_dir, model_dict,
-                            data_types_fst_fp, eras_type_df, model_types_fst)
+        make_prediction_fst(strat, strat_dir, model_dict, data_types_fst_fp,
+                            eras_type_df, model_types_fst)
 
     if layer == 'snd':
 
         filename = PREDICTIONS_FILENAME
 
         filename_label = filename.replace('predictions_', 'pred_label_')
-        predictions_fst_fp = [strat_dir + '/' + filename_label +
-                              d_t + PRED_FST_SUFFIX for d_t in PREDICTION_TYPES]
+        predictions_fst_fp = [
+            strat_dir + '/' + filename_label + d_t + PRED_FST_SUFFIX
+            for d_t in PREDICTION_TYPES
+        ]
         data_types_fst_fp = list(zip(PREDICTION_TYPES, predictions_fst_fp))
 
         # Snd layer
-        pred_snd_fp = [strat_dir + '/' + PREDICTIONS_FILENAME +
-                       d_t + PRED_SND_SUFFIX for d_t in PREDICTION_TYPES]
+        pred_snd_fp = [
+            strat_dir + '/' + PREDICTIONS_FILENAME + d_t + PRED_SND_SUFFIX
+            for d_t in PREDICTION_TYPES
+        ]
         data_types_snd_fp = list(
             zip(PREDICTION_TYPES, predictions_fst_fp, pred_snd_fp))
 
-        model_types_snd = [ModelType.XGBoost, ModelType.RandomForest,
-                           ModelType.NeuralNetwork]
+        model_types_snd = [
+            ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
+        ]
 
-        make_prediction_snd(
-            strat, strat_dir, model_dict, data_types_snd_fp, model_types_snd)
+        make_prediction_snd(strat, strat_dir, model_dict, data_types_snd_fp,
+                            model_types_snd)
 
     print("--- %s seconds ---" % (time.time() - start_time))
 

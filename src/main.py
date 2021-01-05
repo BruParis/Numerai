@@ -4,15 +4,17 @@ import time
 from collections import deque
 
 from common import *
-from corr_analysis import feature_era_corr
+from data_analysis import feature_era_corr
 from clustering import clustering, simple_era_clustering
-from format_data import split_data_clusters, snd_layer_training_data
+from format_data import split_data_clusters
 from models import generate_models, generate_cl_model
 from reader import set_h5_stores
-from prediction import make_prediction, make_cluster_predict, final_pred, upload_results
+from prediction import make_prediction, make_cluster_predict, final_pred, snd_layer_training_data, upload_results
 
-ALL_OPERATIONS = ['set_h5', 'ft_era_corr', 'split_data', 'train',
-                  'prediction', 'final_prediction', 'upload']
+ALL_OPERATIONS = [
+    'set_h5', 'ft_era_corr', 'split_data', 'train', 'prediction',
+    'final_prediction', 'upload'
+]
 
 
 def print_funct_calls(layers, strategies, operations_q):
@@ -106,8 +108,7 @@ def main(argv):
     """
 
     arg_parser = argparse.ArgumentParser(
-        prog=argv[0],
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+        prog=argv[0], formatter_class=argparse.RawDescriptionHelpFormatter)
     arg_parser.add_argument("layer",
                             help="<layer> used",
                             nargs=1,
@@ -127,7 +128,9 @@ def main(argv):
     layers = ['fst', 'snd'] if args.layer[0] == 'full' else args.layer
     strategies = args.strat
     operations_q = deque([
-        op for op in ALL_OPERATIONS for arg_op in args.operations if arg_op == op])
+        op for op in ALL_OPERATIONS for arg_op in args.operations
+        if arg_op == op
+    ])
 
     if '0' in layers:
         idx_0 = layers.index('0')

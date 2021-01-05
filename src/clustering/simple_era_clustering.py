@@ -1,6 +1,6 @@
 from common import *
 from reader import ReaderCSV, load_h5_eras
-from corr_analysis import feature_t_corr
+from data_analysis import feature_t_corr
 from models import ModelConstitution
 
 import os
@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set_theme(color_codes=True)
 
-
 # CHOICE
 CL_MIN_RATIO_FT_T_CORR = 0.10
 CL_THRESHOLD_FT_T_CORR = 0.04
@@ -20,8 +19,7 @@ CL_THRESHOLD_FT_T_CORR = 0.04
 
 def load_eras():
     file_reader = ReaderCSV(TRAINING_DATA_FP)
-    eras_df = file_reader.read_csv(
-        columns=['id', 'era']).set_index('id')
+    eras_df = file_reader.read_csv(columns=['id', 'era']).set_index('id')
 
     eras = eras_df.era.unique()
 
@@ -50,8 +48,12 @@ def find_fst_idx_value(data_l, value):
 
 def set_cl_dict(era_l, era_cluster_idx):
     clusters = set(era_cluster_idx)
-    cl_dict = {'cluster_' + str(cl): {'eras_idx': find_value_indexes(
-        era_cluster_idx, cl)} for cl in clusters}
+    cl_dict = {
+        'cluster_' + str(cl): {
+            'eras_idx': find_value_indexes(era_cluster_idx, cl)
+        }
+        for cl in clusters
+    }
     cl_dict = {cl: {'selected_features': None} for cl, v in cl_dict.items()}
 
     return cl_dict
@@ -69,11 +71,11 @@ def eras_clustering(era_l, features):
 
     for era in era_l:
         print("era: ", era)
-        data_era_df = file_reader.read_csv_matching(
-            'era', [era]).set_index('id')
+        data_era_df = file_reader.read_csv_matching('era',
+                                                    [era]).set_index('id')
 
-        ft_t_corr = feature_t_corr(
-            data_era_df, features).abs().sort_values(ascending=False)
+        ft_t_corr = feature_t_corr(data_era_df,
+                                   features).abs().sort_values(ascending=False)
 
         # plot_fts_t_corr(ft_t_corr)
         total_num_ft = len(ft_t_corr)

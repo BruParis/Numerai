@@ -1,7 +1,6 @@
 import pandas as pd
 
 from common import *
-from models import ModelType
 
 
 def proba_to_target_label(proba, models):
@@ -14,8 +13,8 @@ def proba_to_target_label(proba, models):
         if model_proba is None:
             continue
 
-        proba_to_target_classes = dict(
-            zip(model_proba.columns, TARGET_CLASSES))
+        proba_to_target_classes = dict(zip(model_proba.columns,
+                                           TARGET_CLASSES))
         model_proba = model_proba.rename(columns=proba_to_target_classes)
 
         pred_df = model_proba.idxmax(axis=1)
@@ -29,7 +28,22 @@ def proba_to_target_label(proba, models):
     return res
 
 
-def rank_proba(proba, models):
+def rank_proba(proba, model_name):
+    score_df = pd.concat([
+        proba.loc[:, proba.columns.str.endswith(str(t_val))] * t_val
+        for t_val in TARGET_VALUES
+    ],
+                         axis=1).sum(axis=1)
+    rank_s = score_df.rank() / len(score_df)
+    rank_df = pd.DataFrame(rank_s, columns=[model_name])
+
+    if 'era' in proba.columns:
+        rank_df = pd.concat([rank_df, proba.loc[:, 'era']], axis=1)
+
+    return rank_df
+
+
+def rank_proba_models(proba, models):
     res = pd.DataFrame()
     for eModel in models:
 
@@ -39,15 +53,8 @@ def rank_proba(proba, models):
         if model_proba is None:
             continue
 
-        score_df = pd.concat([model_proba.loc[:, model_proba.columns.str.endswith(
-            str(t_val))] * t_val for t_val in TARGET_VALUES], axis=1).sum(axis=1)
-        rank_s = score_df.rank() / len(score_df)
-        rank_df = pd.DataFrame(rank_s, columns=[model_name])
-
-        res = pd.concat([res, rank_df], axis=1)
-
-    if 'era' in proba.columns:
-        res = pd.concat([res, proba.loc[:, 'era']], axis=1)
+        model_rank_df = rank_proba(model_proba, model_name)
+        res = pd.concat([res, model_rank_df], axis=1)
 
     return res
 

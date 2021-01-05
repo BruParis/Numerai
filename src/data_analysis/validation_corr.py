@@ -6,13 +6,12 @@ from reader import ReaderCSV
 BENCHMARK = 0
 BAND = 0.2
 
-# move to corr_analysis, make it more generic tool
-
 
 def load_validation_target():
     file_reader = ReaderCSV(TOURNAMENT_DATA_FP)
-    input_data = file_reader.read_csv_matching(
-        'data_type', [VALID_TYPE], columns=['id', 'era', 'target']).set_index('id')
+    input_data = file_reader.read_csv_matching('data_type', [VALID_TYPE],
+                                               columns=['id', 'era', 'target'
+                                                        ]).set_index('id')
 
     return input_data
 
@@ -24,10 +23,9 @@ def payout(scores):
 def score(data_df, pred_col_name):
     # Submissions are scored by spearman correlation
     # method="first" breaks ties based on order in array
-    return np.corrcoef(
-        data_df[TARGET_LABEL],
-        data_df[pred_col_name].rank(pct=True, method="first")
-    )[0, 1]
+    return np.corrcoef(data_df[TARGET_LABEL],
+                       data_df[pred_col_name].rank(pct=True,
+                                                   method="first"))[0, 1]
 
 
 def pred_valid_score(validation_data, pred_col_name):
@@ -39,20 +37,23 @@ def pred_valid_score(validation_data, pred_col_name):
 
     print("validation_data: ", validation_data)
 
-    validation_correlations = validation_data.groupby(
-        "era").apply(score, pred_col_name)
+    validation_correlations = validation_data.groupby("era").apply(
+        score, pred_col_name)
 
     valid_corr_mean = validation_correlations.mean()
     valid_corr_std = validation_correlations.std()
     valid_payout = payout(validation_correlations).mean()
 
     print(
-        f"On validation the correlation has mean {valid_corr_mean} and std {valid_corr_std}")
-    print(
-        f"On validation the average per-era payout is {valid_payout}")
+        f"On validation the correlation has mean {valid_corr_mean} and std {valid_corr_std}"
+    )
+    print(f"On validation the average per-era payout is {valid_payout}")
 
-    valid_score = {'valid_corr_mean': valid_corr_mean,
-                   'valid_corr_std': valid_corr_std, 'valid_payout': valid_payout}
+    valid_score = {
+        'valid_corr_mean': valid_corr_mean,
+        'valid_corr_std': valid_corr_std,
+        'valid_payout': valid_payout
+    }
 
     # Check consistency -> need proba
     # print("=============================")
@@ -90,8 +91,10 @@ def models_valid_score(models_dict, model_types, pred_models_df):
 
     print('model_types: ', model_types)
 
-    models_scores = {model.name: pred_valid_score(
-        valid_df, model.name) for model in model_types}
+    models_scores = {
+        model.name: pred_valid_score(valid_df, model.name)
+        for model in model_types
+    }
 
     print('models_scores: ', models_scores)
     print('models_dict: ', models_dict)
@@ -106,3 +109,6 @@ def valid_score(pred_f, pred_name):
     res = pred_valid_score(valid_df, pred_name)
 
     return res
+
+
+# def eval_score(pred_df):

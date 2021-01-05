@@ -15,7 +15,7 @@ CL_TR_DATA_FP = 'training_data.csv'
 CL_TEST_DATA_FP = 'test_data.csv'
 
 
-# move to corr_analysis ?
+# move to data_analysis ?
 def correlation_matrix(eras_df):
     eras_input_df = eras_df.drop([TARGET_LABEL], axis=1)
     corr_matrix = eras_input_df.corr()
@@ -25,8 +25,8 @@ def correlation_matrix(eras_df):
 
 
 def split_by_clusters_eras(cl_eras):
-    eras_ft_data_df = load_h5_eras(
-        TRAINING_STORE_H5_FP, cl_eras).set_index('id')
+    eras_ft_data_df = load_h5_eras(TRAINING_STORE_H5_FP,
+                                   cl_eras).set_index('id')
 
     fst_layer_df, remaining_df = train_test_split(
         eras_ft_data_df, test_size=FST_LAYER_TRAIN_RATIO)
@@ -64,8 +64,8 @@ def split_data_clusters(dirname):
 
     for cl_name, cl_c in model_c.clusters.items():
         cl_eras = cl_c['eras_name']
-        cluster_data = load_h5_eras(
-            TRAINING_STORE_H5_FP, cl_eras).set_index('id')
+        cluster_data = load_h5_eras(TRAINING_STORE_H5_FP,
+                                    cl_eras).set_index('id')
 
         cl_fts = cl_c['selected_features']
         generate_data_cluster(dirname, cluster_data, cl_name, cl_fts)

@@ -6,7 +6,6 @@ import errno
 import matplotlib.pyplot as plt
 
 from reader import ReaderCSV, load_h5_eras
-from models import ModelConstitution
 from common import *
 
 
@@ -28,7 +27,8 @@ def plot_corr(data):
 def ft_target_corr(data_df, features):
     ft_t_corr = pd.Series({
         ft: np.corrcoef(data_df[TARGET_LABEL], data_df[ft])[0, 1]
-        for ft in features})
+        for ft in features
+    })
 
     return ft_t_corr
 
@@ -40,8 +40,10 @@ def get_eras_corr(data_fp, eras, features):
     for era in eras:
         data_df = load_h5_eras(data_fp, [era])
 
-        era_ft_corr = [np.corrcoef(data_df[TARGET_LABEL], data_df[ft])[0, 1]
-                       for ft in features]
+        era_ft_corr = [
+            np.corrcoef(data_df[TARGET_LABEL], data_df[ft])[0, 1]
+            for ft in features
+        ]
 
         row_era_corr = [era] + era_ft_corr
         data_l.append(row_era_corr)
@@ -85,7 +87,9 @@ def feature_era_corr(data_csv, data_h5):
 
 
 def feature_t_corr(data_df, features):
-    ft_corr = pd.Series({ft: np.corrcoef(data_df[TARGET_LABEL], data_df[ft])[0, 1]
-                         for ft in features})
+    ft_corr = pd.Series({
+        ft: np.corrcoef(data_df[TARGET_LABEL], data_df[ft])[0, 1]
+        for ft in features
+    })
 
     return ft_corr

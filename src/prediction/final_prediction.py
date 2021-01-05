@@ -7,9 +7,8 @@ import itertools as it
 from common import *
 from reader import ReaderCSV
 from prediction import PredictionOperator
-from corr_analysis import valid_score
+from data_analysis import rank_pred, valid_score
 from models import ModelType
-from .ranking import rank_pred
 
 ARITHM_MEAN_RANK = 'a_mean_rank'
 GEOM_MEAN_RANK = 'g_mean_rank'
@@ -79,10 +78,11 @@ def aggr_model_comb(data_df, model_comb):
 def final_predict_layer(dirname, pred_dict, model_types, data_types_fp):
 
     max_comb = len(model_types)
-    model_t_comb = list(it.chain.from_iterable(
-        [it.combinations(model_types, c_len)
-         for c_len in range(2, max_comb + 1)]
-    ))
+    model_t_comb = list(
+        it.chain.from_iterable([
+            it.combinations(model_types, c_len)
+            for c_len in range(2, max_comb + 1)
+        ]))
     print("model_t_comb: ", model_t_comb)
 
     for data_t, fpath in data_types_fp:
@@ -95,7 +95,9 @@ def final_predict_layer(dirname, pred_dict, model_types, data_types_fp):
 
         print("data_df: ", data_df)
 
-        aggr_l = [aggr_model_comb(data_df, list(comb))for comb in model_t_comb]
+        aggr_l = [
+            aggr_model_comb(data_df, list(comb)) for comb in model_t_comb
+        ]
 
         result_vote = pd.concat(aggr_l, axis=1)
         print("result_vote: ", result_vote)
@@ -120,11 +122,9 @@ def compute_final_pred(dirname, data_types_fp, model_types, method):
         data_model_t_df = data_df[model_types]
 
         if method == ARITHM_MEAN_RANK:
-            res = pd.DataFrame(arith_mean_rank(
-                data_model_t_df), columns=[col])
+            res = pd.DataFrame(arith_mean_rank(data_model_t_df), columns=[col])
         elif method == GEOM_MEAN_RANK:
-            res = pd.DataFrame(geo_mean_rank(
-                data_model_t_df), columns=[col])
+            res = pd.DataFrame(geo_mean_rank(data_model_t_df), columns=[col])
 
         save_predict(dirname, data_t, FST_LAYER, res)
 
@@ -142,22 +142,24 @@ def final_pred(strat_dir, l):
 
     layer_key = FST_LAYER if l == 'fst' else SND_LAYER
     pred_suffix = PRED_FST_SUFFIX if l == 'fst' else PRED_SND_SUFFIX
-    pred_fp = [strat_dir + '/predictions_tournament_' +
-               d_t + pred_suffix for d_t in PREDICTION_TYPES]
+    pred_fp = [
+        strat_dir + '/predictions_tournament_' + d_t + pred_suffix
+        for d_t in PREDICTION_TYPES
+    ]
     data_types_fp = list(zip(PREDICTION_TYPES, pred_fp))
 
     if COMPUTE_BOOL:
         compute_model_types = ['XGBoost', 'RandomForest', 'NeuralNetwork']
         method = ARITHM_MEAN_RANK
-        compute_final_pred(
-            strat_dir, data_types_fp, compute_model_types, method)
+        compute_final_pred(strat_dir, data_types_fp, compute_model_types,
+                           method)
     else:
         model_types = ['XGBoost', 'RandomForest', 'NeuralNetwork']
         model_final_dict[layer_key] = dict()
         model_layer_dict = model_final_dict[layer_key]
 
-        final_predict_layer(strat_dir, model_layer_dict,
-                            model_types, data_types_fp)
+        final_predict_layer(strat_dir, model_layer_dict, model_types,
+                            data_types_fp)
 
     if not COMPUTE_BOOL:
         with open(model_dict_fp, 'w') as fp:

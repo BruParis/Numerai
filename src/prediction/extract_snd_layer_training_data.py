@@ -5,7 +5,8 @@ import pandas as pd
 from reader import ReaderCSV
 
 from models import Model, ModelType
-from prediction import PredictionOperator, rank_proba, proba_to_target_label
+from data_analysis import proba_to_target_label, rank_proba
+from prediction import PredictionOperator
 from common import *
 
 
@@ -42,17 +43,24 @@ def snd_layer_training_data(strat):
 
     print("snd_layer_data: ", snd_layer_data)
 
-    fst_layer_model_types = [ModelType.XGBoost,
-                             ModelType.RandomForest, ModelType.NeuralNetwork]
+    fst_layer_model_types = [
+        ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
+    ]
 
-    pred_op_fst_layer = PredictionOperator(
-        strat, cl_dirname, model_dict, fst_layer_model_types, TRAINING_TYPE, bMultiProcess=False)
+    pred_op_fst_layer = PredictionOperator(strat,
+                                           cl_dirname,
+                                           model_dict,
+                                           fst_layer_model_types,
+                                           TRAINING_TYPE,
+                                           bMultiProcess=False)
 
     model_dict[SND_LAYER] = dict()
-    model_types_fst = [ModelType.XGBoost, ModelType.RandomForest,
-                       ModelType.NeuralNetwork]
+    model_types_fst = [
+        ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
+    ]
     model_dict[SND_LAYER]['input_models'] = [
-        eModel.name for eModel in model_types_fst]
+        eModel.name for eModel in model_types_fst
+    ]
 
     pred_full_data = pd.DataFrame()
     for cl in model_dict['clusters'].keys():
@@ -70,8 +78,8 @@ def snd_layer_training_data(strat):
         #rank_cl.columns = [cl + '_' + col for col in rank_cl.columns]
         #pred_full_data = pd.concat([pred_full_data, rank_cl], axis=1)
 
-    pred_full_data = pd.concat(
-        [pred_full_data, snd_layer_data[TARGET_LABEL]], axis=1)
+    pred_full_data = pd.concat([pred_full_data, snd_layer_data[TARGET_LABEL]],
+                               axis=1)
     pred_training_data_fp = cl_dirname + '/' + PRED_TRAIN_FILENAME
 
     with open(pred_training_data_fp, 'w') as f:
