@@ -9,11 +9,11 @@ from clustering import clustering, simple_era_clustering
 from format_data import split_data_clusters
 from models import generate_models, generate_cl_model
 from reader import set_h5_stores
-from prediction import make_prediction, make_cluster_predict, final_pred, snd_layer_training_data, upload_results
+from prediction import make_prediction, cluster_proba, snd_layer_training_data, upload_results
 
 ALL_OPERATIONS = [
-    'set_h5', 'ft_era_corr', 'split_data', 'train', 'prediction',
-    'final_prediction', 'upload'
+    'set_h5', 'ft_era_corr', 'split_data', 'train', 'proba', 'prediction',
+    'upload'
 ]
 
 
@@ -34,11 +34,12 @@ def print_funct_calls(layers, strategies, operations_q):
             print(" strat: ", stra)
             for l in l_aux:
                 print('  layer: ', l)
+                if op == 'proba':
+                    print('   --> make_proba')
+                    continue
                 if op == 'prediction':
                     print('   --> make_pred')
                     continue
-                if op == 'final_prediction':
-                    print('   --> final_pred')
                 if op == 'train':
                     print('   --> generate_models')
                     continue
@@ -94,8 +95,8 @@ def main_l_0(strategies, operations_q, argv, arg_parser):
                 generate_cl_model(strat_dir, cl)
                 continue
 
-            if op == 'prediction':
-                make_cluster_predict(strat_dir, stra, cl)
+            if op == 'proba':
+                cluster_proba(strat_dir, stra, cl)
                 continue
 
     print("--- %s seconds ---" % (time.time() - start_time))
@@ -169,16 +170,17 @@ def main(argv):
                 if op == 'train':
                     generate_models(strat_dir, stra, l)
                     continue
-                if op == 'prediction':
-                    make_prediction(strat_dir, stra, l)
-                    continue
-                if op == 'final_prediction':
-                    final_pred(strat_dir, l)
                 if op == 'upload':
                     upload_results(strat_dir, l)
                     break
 
                 if l == 'fst':
+                    if op == 'proba':
+                        cluster_proba(strat_dir, stra)
+                        continue
+                    if op == 'prediction':
+                        make_prediction(strat_dir, stra, l)
+                        continue
                     if op == 'split_data':
                         if stra == STRAT_CLUSTER:
                             clustering(strat_dir)

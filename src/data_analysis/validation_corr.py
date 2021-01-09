@@ -35,13 +35,12 @@ def pred_valid_score(validation_data, pred_col_name):
 
     print("Validation score for prediction type: ", pred_col_name)
 
-    print("validation_data: ", validation_data)
-
     validation_correlations = validation_data.groupby("era").apply(
         score, pred_col_name)
 
     valid_corr_mean = validation_correlations.mean()
     valid_corr_std = validation_correlations.std()
+    valid_corr_sharpe = valid_corr_mean / valid_corr_std
     valid_payout = payout(validation_correlations).mean()
 
     print(
@@ -52,6 +51,7 @@ def pred_valid_score(validation_data, pred_col_name):
     valid_score = {
         'valid_corr_mean': valid_corr_mean,
         'valid_corr_std': valid_corr_std,
+        'valid_corr_sharpe': valid_corr_sharpe,
         'valid_payout': valid_payout
     }
 
@@ -99,16 +99,12 @@ def models_valid_score(models_dict, model_types, pred_models_df):
     print('models_scores: ', models_scores)
     print('models_dict: ', models_dict)
     for model, valid_scorr in models_scores.items():
-        models_dict[model]['valid_score'] = valid_scorr
+        models_dict[model] = valid_scorr
 
 
-def valid_score(pred_f, pred_name):
-    valid_df = load_validation_target()
+def valid_score(pred_f, pred_name, data_target):
 
-    valid_df = pd.concat([valid_df, pred_f], axis=1)
+    valid_df = pd.concat([data_target, pred_f], axis=1)
     res = pred_valid_score(valid_df, pred_name)
 
     return res
-
-
-# def eval_score(pred_df):

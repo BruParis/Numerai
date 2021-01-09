@@ -168,18 +168,41 @@ def make_model_prefix(eModel):
     return [5, 10, 30]
 
 
+def gen_aggr_dict(cl_dict):
+    cl_m_w_sorted = []
+    for cl, cl_desc in cl_dict.items():
+        cl_desc_m = cl_desc['models']
+        for model_name, model_desc in cl_desc_m.items():
+            cl_m_w = model_desc['valid_eval']['valid_score']['valid_corr_mean']
+            if cl_m_w > 0:
+                cl_m_w_sorted.append((cl, model_name, cl_m_w))
+
+    cl_m_w_sorted = sorted(cl_m_w_sorted, key=lambda x: x[2], reverse=True)
+
+    aggr_dict = dict()
+    for i in range(1, len(cl_m_w_sorted)):
+        aggr_cl_m_w = cl_m_w_sorted[:i]
+        aggr_dict[i] = {
+            'cluster_models': [(cl, m, w) for cl, m, w in aggr_cl_m_w],
+            'total_w': sum([w for *_, w in aggr_cl_m_w])
+        }
+
+    return aggr_dict
+
+
 def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
+    print("build model cluster: ", cl)
 
     cl_dirpath = dirname + '/' + cl
     train_filepath = cl_dirpath + '/' + 'training_data.csv'
-    test_filepath = cl_dirpath + '/' + 'test_data.csv'
+    # test_filepath = cl_dirpath + '/' + 'test_data.csv'
 
     train_data = load_data(train_filepath)
-    test_data = load_data(test_filepath)
+    #test_data = load_data(test_filepath)
 
     cl_fts = cl_dict['selected_features']
 
-    valid_col = ['id'] + cl_fts + ['target']
+    valid_col = ['id', 'era'] + cl_fts + ['target']
     cl_valid_data = load_valid_cl_data(TOURNAMENT_DATA_FP, [VALID_TYPE],
                                        valid_col)
 
@@ -193,7 +216,7 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
     # else:
 
     # model_types = ModelType
-    # model_types = [ModelType.RandomForest]
+    # model_types = [ModelType.NeuralNetwork]
     # model_types = [ModelType.XGBoost, ModelType.RandomForest,
     #                ModelType.NeuralNetwork]  # , ModelType.K_NN]
     model_types = [
@@ -220,17 +243,18 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
 
                 model_generator.generate_model(model_params, model_debug)
                 model = model_generator.build_model(train_input, train_target)
-                print(" === evaluation - test data ===")
-                test_eval = model_generator.evaluate_model(test_data)
+                # print(" === evaluation - test data ===")
+                # test_eval = model_generator.evaluate_model(test_data)
                 print(" === tourn. validation - test data ===")
-                valid_eval = model_generator.evaluate_model(cl_valid_data)
+                valid_eval = model_generator.evaluate_model(
+                    cl_valid_data, cl_dirpath)
 
                 log_loss = valid_eval['log_loss']
 
                 if log_loss < best_ll:
                     best_ll = log_loss
                     filepath, configpath = model.save_model()
-                    model_dict['test_eval'] = test_eval
+                    # model_dict['test_eval'] = test_eval
                     model_dict['valid_eval'] = valid_eval
                     model_dict['model_filepath'] = filepath
                     model_dict['config_filepath'] = configpath
@@ -261,6 +285,7 @@ def generate_cl_model(dirname, cl):
 def generate_fst_layer_model(dirname, bDebug, bMetrics, bSaveModel, bMultiProc,
                              bSaveModelDict):
     model_c_filepath = dirname + '/' + MODEL_CONSTITUTION_FILENAME
+    model_a_filepath = dirname + '/' + MODEL_AGGREGATION_FILENAME
     model_dict = load_json(model_c_filepath)
     cl_dict = model_dict['clusters']
 
@@ -281,9 +306,12 @@ def generate_fst_layer_model(dirname, bDebug, bMetrics, bSaveModel, bMultiProc,
     else:
         for cl, cl_dict in cl_dict.items():
             cl_model_build(dirname, cl, cl_dict, bMetrics, bDebug)
+            continue
 
     print("model building done")
     print("--- %s seconds ---" % (time.time() - start_time))
+
+    aggr_dict = gen_aggr_dict(model_dict['clusters'])
 
     if bSaveModel or bSaveModelDict:
         print("model_c_filepath: ", model_c_filepath)
@@ -292,6 +320,9 @@ def generate_fst_layer_model(dirname, bDebug, bMetrics, bSaveModel, bMultiProc,
 
         with open(model_c_filepath, 'w') as fp:
             json.dump(model_dict, fp, indent=4)
+
+        with open(model_a_filepath, 'w') as fp:
+            json.dump(aggr_dict, fp, indent=4)
 
 
 def load_data_filter_id(data_filename, list_id, columns=None):

@@ -23,9 +23,10 @@ class XGBModel(Model):
         # evallist = [(self.test_data, 'eval'), (self.train_data, 'train')]
         # num_round = model_params['num_round'] -> best tree limit
         # XGBRFClassifier (?)
-        #objective='binary:logisitc',
+        # objective='binary:logisitc',
+        # objective='multi:softprob',
         self.model = xgb.XGBClassifier(
-            objective='multi:softprob',
+            objective='binary:logisitc',
             eval_metric='mlogloss',
             num_class=len(TARGET_CLASSES),
             n_estimators=self.model_params['n_estimators'],
@@ -40,13 +41,11 @@ class XGBModel(Model):
         train_target_r = train_target.values.ravel()
 
         print("START TRAINING")
-        print("train_input: ", train_input)
         self.model.fit(train_input, train_target_r)
 
         print("DONE")
 
     def predict(self, data_input):
-        print("data_input: ", data_input)
         prediction = self.model.predict(data_input)
         return prediction
 

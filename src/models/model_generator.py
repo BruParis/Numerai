@@ -6,7 +6,7 @@ import itertools
 import sklearn.metrics as sm
 
 from common import *
-from data_analysis import rank_proba
+from data_analysis import rank_proba, valid_score
 from .model_abstract import Model, ModelType
 from .model_itf import init_metrics, produce_metrics, generate_model
 
@@ -34,12 +34,14 @@ class ModelGenerator():
 
     def _format_input_target(self, data_df):
 
-        # if self.model_type is not ModelType.XGBoost:
-        if ERA_LABEL in data_df.columns:
-            data_df = data_df.drop([ERA_LABEL], axis=1)
+        data_aux = data_df.copy()
 
-        input_df = data_df.drop([TARGET_LABEL], axis=1)
-        target_df = data_df.loc[:, [TARGET_LABEL]]
+        # if self.model_type is not ModelType.XGBoost:
+        if ERA_LABEL in data_aux.columns:
+            data_aux = data_aux.drop([ERA_LABEL], axis=1)
+
+        input_df = data_aux.drop([TARGET_LABEL], axis=1)
+        target_df = data_aux.loc[:, [TARGET_LABEL]]
 
         # mutiply target value to get target class index
         target_df = TARGET_FACT_NUMERIC * target_df
@@ -158,7 +160,8 @@ class ModelGenerator():
 
         return self.model
 
-    def evaluate_model(self, data_df):
+    def evaluate_model(self, data_df, cl_dirpath=None):
+        print("data_df: ", data_df)
 
         data_input, data_target = self._format_input_target(data_df)
 
@@ -187,9 +190,20 @@ class ModelGenerator():
         eval_score_dict['log_loss'] = log_loss
         eval_score_dict['accuracy_score'] = accuracy_score
 
-        test_rank = rank_proba(test_proba_df, self.model_type.name)
+        eval_rank = rank_proba(test_proba_df, self.model_type.name)
+        eval_rank['era'] = data_df['era']
 
-        print("test_rank: ", test_rank)
+        if cl_dirpath is not None:
+            model_eval_data = pd.concat([test_proba_df, eval_rank], axis=1)
+            model_eval_fn = self.model_type.name + '_valid_data.csv'
+            model_eval_fp = cl_dirpath + '/' + model_eval_fn
+            with open(model_eval_fp, 'w') as fp:
+                model_eval_data.to_csv(fp)
+
+        eval_score_dict['valid_score'] = valid_score(eval_rank,
+                                                     self.model_type.name,
+                                                     data_target[TARGET_LABEL])
+
         print("eval: ", eval_score_dict)
 
         if self.write_metrics:

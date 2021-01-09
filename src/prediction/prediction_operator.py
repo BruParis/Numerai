@@ -11,13 +11,13 @@ from common import *
 
 
 class PredictionOperator():
-
     def _load_corr_subset(self, subset_name):
         corr_path = self.dirname + '/' + subset_name + '/eras_corr.csv'
         corr = ReaderCSV(corr_path).read_csv().set_index('corr_features')
         return corr
 
-    def _model_predict_proba(self, model_path, model_type, model_prefix, input_data):
+    def _model_predict_proba(self, model_path, model_type, model_prefix,
+                             input_data):
         print("path: ", model_path)
         print("model_type: ", model_type)
         print("model_prefix: ", model_prefix)
@@ -26,11 +26,14 @@ class PredictionOperator():
 
         prediction_proba = model.predict_proba(input_data)
 
-        columns_labels = [model.model_name + '_' +
-                          proba_label for proba_label in COL_PROBA_NAMES]
+        columns_labels = [
+            model.model_name + '_' + proba_label
+            for proba_label in COL_PROBA_NAMES
+        ]
 
-        prediction_proba_df = pd.DataFrame(
-            prediction_proba, input_data.index, columns=columns_labels)
+        prediction_proba_df = pd.DataFrame(prediction_proba,
+                                           input_data.index,
+                                           columns=columns_labels)
 
         return prediction_proba_df
 
@@ -44,11 +47,11 @@ class PredictionOperator():
         for col in models_proba_full.columns:
             models_proba_full[col].values[:] = 0.0
 
-        prefix = model_desc['prefix']
+        prefix = None  #model_desc['prefix']
         model_fp = model_desc['model_filepath']
 
-        pred_proba = self._model_predict_proba(
-            model_fp, eModel, prefix, input_data_ft)
+        pred_proba = self._model_predict_proba(model_fp, eModel, prefix,
+                                               input_data_ft)
 
         return pred_proba
 
@@ -62,8 +65,8 @@ class PredictionOperator():
             if not (eModel in self.model_types):
                 continue
 
-            cl_model_proba = self._model_proba(
-                input_data, cl_dict, eModel, model_desc)
+            cl_model_proba = self._model_proba(input_data, cl_dict, eModel,
+                                               model_desc)
 
             cl_all_models_proba[eModel.name] = cl_model_proba
 
@@ -91,17 +94,20 @@ class PredictionOperator():
 
         return cl_all_models_proba
 
-    def __init__(self, strat, dirname, model_const, model_types, data_type,
-                 bMultiProcess=False):
+    def __init__(self,
+                 strat,
+                 dirname,
+                 model_const,
+                 model_types,
+                 bMultiProc=False):
         self.strat = strat
-        self.data_type = data_type
         self.dirname = dirname
         self.model_const = model_const
         self.clusters = self.model_const['clusters']
 
         self.model_types = model_types
         self.model_prefixes = model_types
-        self.bMultiProcess = bMultiProcess
+        self.bMultiProc = bMultiProc
 
     def make_cl_predict(self, input_data, cl):
         cl_dict = self.clusters[cl]
@@ -113,15 +119,14 @@ class PredictionOperator():
 
             full_proba = pd.concat([full_proba, cl_proba[eModel.name]], axis=1)
 
+        full_proba = pd.concat([input_data['era'], full_proba], axis=1)
+
         return full_proba
 
     def make_snd_layer_predict(self, data_df, bSnd=True):
 
         if 'era' in data_df.columns:
             data_df = data_df.drop('era', axis=1)
-
-        if 'data_type' in data_df.columns:
-            data_df = data_df.drop('data_type', axis=1)
 
         if TARGET_LABEL in data_df.columns:
             data_df = data_df.drop(TARGET_LABEL, axis=1)

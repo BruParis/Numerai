@@ -9,10 +9,16 @@ SND_LAYER_DIRNAME = 'snd_layer'
 STRAT_CLUSTER = 'cluster'
 STRAT_ERA_GRAPH = 'era_graph'
 STRAT_ERA_SIMPLE = 'era'
-STRA_DIRNAME_DICT = {STRAT_CLUSTER: ERA_CL_DIRNAME,
-                     STRAT_ERA_SIMPLE: ERA_SIMPLE_DIRNAME, STRAT_ERA_GRAPH: ERA_GRAPH_DIRNAME}
-STRA_CL_PREFIX_DIR_DICT = {STRAT_CLUSTER: 'cluster_',
-                           STRAT_ERA_SIMPLE: 'era', STRAT_ERA_GRAPH: 'cluster_'}
+STRA_DIRNAME_DICT = {
+    STRAT_CLUSTER: ERA_CL_DIRNAME,
+    STRAT_ERA_SIMPLE: ERA_SIMPLE_DIRNAME,
+    STRAT_ERA_GRAPH: ERA_GRAPH_DIRNAME
+}
+STRA_CL_PREFIX_DIR_DICT = {
+    STRAT_CLUSTER: 'cluster_',
+    STRAT_ERA_SIMPLE: 'era',
+    STRAT_ERA_GRAPH: 'cluster_'
+}
 
 TRAINING_DATA_FP = DATA_DIRNAME + '/numerai_training_data.csv'
 TRAINING_STORE_H5_FP = DATA_DIRNAME + '/training_store.h5'
@@ -28,8 +34,9 @@ CLASS_WEIGHT = [0.04, 0.19, 0.5, 0.19, 0.04]
 SCALE_POS_WEIGHT = 2
 TARGET_FACT_NUMERIC = 4
 CORR_THRESHOLD = 0.036
-COL_PROBA_NAMES = ['proba_0.0', 'proba_0.25',
-                   'proba_0.5', 'proba_0.75', 'proba_1.0']
+COL_PROBA_NAMES = [
+    'proba_0.0', 'proba_0.25', 'proba_0.5', 'proba_0.75', 'proba_1.0'
+]
 
 FST_LAYER_TRAIN_RATIO = 0.20
 TEST_RATIO = 0.10
@@ -38,6 +45,7 @@ TEST_RATIO = 0.10
 ERAS_FT_T_CORR_FP = DATA_DIRNAME + '/eras_ft_target_corr.csv'
 
 MODEL_CONSTITUTION_FILENAME = 'model_constitution.json'
+MODEL_AGGREGATION_FILENAME = 'model_aggregations.json'
 ERA_CROSS_SCORE_FP = ERA_CL_DIRNAME + '/era_cross_score.csv'
 
 DATA_LAYER_FILENAME = 'numerai_training_data_layer.csv'

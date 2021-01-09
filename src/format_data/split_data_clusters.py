@@ -24,16 +24,6 @@ def correlation_matrix(eras_df):
     return corr_matrix
 
 
-def split_by_clusters_eras(cl_eras):
-    eras_ft_data_df = load_h5_eras(TRAINING_STORE_H5_FP,
-                                   cl_eras).set_index('id')
-
-    fst_layer_df, remaining_df = train_test_split(
-        eras_ft_data_df, test_size=FST_LAYER_TRAIN_RATIO)
-
-    return fst_layer_df, remaining_df
-
-
 def generate_data_cluster(dirname, cl_data_df, cl_name, cl_fts):
     print("generate data for cluster: ", cl_name)
     cl_dirpath = dirname + '/' + cl_name + '/'
@@ -49,12 +39,12 @@ def generate_data_cluster(dirname, cl_data_df, cl_name, cl_fts):
     cl_ft_data_df = cl_data_df.loc[:, columns]
 
     eras_corr_matrix = correlation_matrix(cl_ft_data_df)
-    train_df, test_df = train_test_split(cl_ft_data_df, test_size=TEST_RATIO)
+    # train_df, test_df = train_test_split(cl_ft_data_df, test_size=TEST_RATIO)
 
-    cl_ft_data_df.to_csv(cl_dirpath + CL_NUMERAI_TR_DATA_FP)
+    #cl_ft_data_df.to_csv(cl_dirpath + CL_NUMERAI_TR_DATA_FP)
     eras_corr_matrix.to_csv(cl_dirpath + CL_ERAS_CORR_FP)
-    train_df.to_csv(cl_dirpath + CL_TR_DATA_FP)
-    test_df.to_csv(cl_dirpath + CL_TEST_DATA_FP)
+    cl_ft_data_df.to_csv(cl_dirpath + CL_TR_DATA_FP)
+    # test_df.to_csv(cl_dirpath + CL_TEST_DATA_FP)
 
 
 def split_data_clusters(dirname):

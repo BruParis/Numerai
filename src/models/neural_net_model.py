@@ -94,8 +94,9 @@ class NeuralNetwork(Model):
         full_layers = self._generate_layers_array()
         self.model = keras.Sequential(full_layers)
 
+        # loss=keras.losses.CategoricalCrossentropy(from_logits=True),
         self.model.compile(
-            loss=keras.losses.CategoricalCrossentropy(from_logits=True),
+            loss=keras.losses.BinaryCrossentropy(from_logits=True),
             optimizer='adam',
             metrics=['accuracy'])
 

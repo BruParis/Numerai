@@ -16,8 +16,7 @@ def load_json(filepath):
 
 def load_data(data_filepath, data_col=None):
     file_reader = ReaderCSV(data_filepath)
-    input_data = file_reader.read_csv(
-        columns=data_col).set_index('id')
+    input_data = file_reader.read_csv(columns=data_col).set_index('id')
 
     return input_data
 
@@ -25,8 +24,10 @@ def load_data(data_filepath, data_col=None):
 def load_predict_file(pred_fp, model_type):
     predict_data = load_data(pred_fp)
     predict_series = predict_data[model_type]
-    predict_df = pd.DataFrame(
-        {'id': predict_series.index, PREDICT_LABEL: predict_series.values}).set_index('id')
+    predict_df = pd.DataFrame({
+        'id': predict_series.index,
+        PREDICT_LABEL: predict_series.values
+    }).set_index('id')
 
     print("predict_df: ", predict_df)
 
@@ -44,36 +45,23 @@ def load_orig_id_era_dt():
 
 def upload_results(strat_dir, pred_l):
 
-    pred_l_suffix = '_' + pred_l
+    pred_l_suffix = pred_l
     orig_data_id_era_dt = load_orig_id_era_dt()
 
     pred_validation_fp = strat_dir + \
-        '/' + FINAL_PRED_VALID_FILENAME + pred_l_suffix + '.csv'
-    pred_test_fp = strat_dir + '/' + FINAL_PRED_TEST_FILENAME + pred_l_suffix + '.csv'
-    pred_live_fp = strat_dir + '/' + FINAL_PRED_LIVE_FILENAME + pred_l_suffix + '.csv'
+        '/' + PREDICTIONS_FILENAME + VALID_TYPE + '_' + pred_l_suffix + '.csv'
+    pred_test_fp = strat_dir + '/' + PREDICTIONS_FILENAME + TEST_TYPE + '_' + pred_l_suffix + '.csv'
+    pred_live_fp = strat_dir + '/' + PREDICTIONS_FILENAME + LIVE_TYPE + '_' + pred_l_suffix + '.csv'
 
-    #pred_method = 'rf'
-    pred_method = 'XGBoost_RandomForest_NeuralNetwork_a_mean_rank'
+    pred_method = 'aggr_pred_16'
 
     valid_data = load_predict_file(pred_validation_fp, pred_method)
     test_data = load_predict_file(pred_test_fp, pred_method)
     live_data = load_predict_file(pred_live_fp, pred_method)
 
     pred_data = pd.concat([valid_data, test_data, live_data], axis=0)
-    # pred_data = live_data
 
-    # re-order result ids to match exactly original tournament file
     pred_data = pred_data.reindex(orig_data_id_era_dt.index)
-
-    # tournament_data = load_data(
-    #    'numerai_tournament_data.csv', data_col=['id', 'data_type'])
-    #tournament_data = tournament_data.loc[tournament_data['data_type'] == 'live']
-
-    # print("pred_data: ", pred_data)
-    # print("pred_data.index: ", pred_data.index)
-    # print("tournament_data index: ", tournament_data.index)
-    # same_idx = pred_data.index == tournament_data.index
-    # print("same_idx: ", same_idx)
 
     prediction_fp = strat_dir + '/' + NUMERAI_PRED_FILENAME
 
