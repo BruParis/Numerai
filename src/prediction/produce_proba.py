@@ -60,7 +60,6 @@ def make_cluster_proba(strat, strat_dir, model_dict, model_types, data_types,
 
         file_w_h_d = {cl: True for cl in cl_list}
 
-        pred_dict = {cl: pd.DataFrame() for cl in cl_list}
         for era_b in eras_batches:
             start_time = time.time()
             print("proba for era batch: ", era_b)
@@ -78,18 +77,14 @@ def make_cluster_proba(strat, strat_dir, model_dict, model_types, data_types,
             for cl in cl_list:
                 cl_proba = pred_op.make_cl_predict(input_data, cl)
                 cl_rank = rank_proba_models(cl_proba, model_types)
-                cl_pred = pd.concat([cl_proba, cl_rank], axis=1)
-                pred_dict[cl] = pd.concat([pred_dict[cl], cl_pred], axis=0)
+                cl_pred = cl_rank if COMPUTE_BOOL else pd.concat(
+                    [cl_proba, cl_rank], axis=1)
 
                 fpath = strat_dir + '/' + cl + '/' + PROBA_FILENAME + d_t + '.csv'
                 f_mode = 'w' if file_w_h_d[cl] else 'a'
                 with open(fpath, f_mode) as f:
                     cl_pred.to_csv(f, header=file_w_h_d[cl], index=True)
                     file_w_h_d[cl] = False
-
-        # for cl, cl_pred in pred_dict.items():
-        #     fpath = strat_dir + '/' + cl + '/' + PROBA_FILENAME + d_t + '.csv'
-        #         cl_pred.to_csv(f, index=True)
 
 
 def cluster_proba(strat_dir, strat, cl=None):

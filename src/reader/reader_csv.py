@@ -5,13 +5,14 @@ import numpy as np
 
 
 class ReaderCSV():
-
     def _get_dtypes(self):
         # print("get dtypes")
         with open(self.filepath, 'r') as f:
             column_names = next(csv.reader(f))
-            dtypes = {x: self.data_type for x in column_names if
-                      x.startswith(('feature', 'target'))}
+            dtypes = {
+                x: self.data_type
+                for x in column_names if x.startswith(('feature', 'target'))
+            }
 
         return dtypes
 
@@ -47,8 +48,8 @@ class ReaderCSV():
 
     def read_idx_to_idx(self, fst_idx, last_idx, columns=None):
         data_df = pd.read_csv(self.filepath,
-                              skiprows=lambda x: (
-                                  x <= fst_idx and x != 0) or x > last_idx,
+                              skiprows=lambda x:
+                              (x <= fst_idx and x != 0) or x > last_idx,
                               usecols=columns)
 
         return data_df
@@ -57,14 +58,10 @@ class ReaderCSV():
 
         full_data_id = pd.read_csv(self.filepath, usecols=['id'])
         data_col = pd.read_csv(self.filepath, usecols=['id', filter_col])
-        data_col_sel = data_col.loc[data_col[filter_col].isin(
-            filter_values)]
+        data_col_sel = data_col.loc[data_col[filter_col].isin(filter_values)]
 
         data_skip_ids = full_data_id.drop(data_col_sel.index)
         data_skip_ids = np.array(data_skip_ids.dropna().index) + 1
-        data_skip_ids = np.delete(
-            data_skip_ids, np.where(data_skip_ids == 1), axis=0)
-
         data_match = pd.read_csv(self.filepath,
                                  skiprows=data_skip_ids,
                                  usecols=columns)
@@ -77,6 +74,8 @@ class ReaderCSV():
 
         dtypes = self._get_dtypes()
         # print("read csv")
-        data_df = pd.read_csv(
-            self.filepath, skiprows=skip_lambda, usecols=columns, dtype=dtypes)
+        data_df = pd.read_csv(self.filepath,
+                              skiprows=skip_lambda,
+                              usecols=columns,
+                              dtype=dtypes)
         return data_df

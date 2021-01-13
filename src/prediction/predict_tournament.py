@@ -120,26 +120,6 @@ def single_cluster_pred(strat, strat_dir, model_dict, model_types,
             cl_rank.to_csv(f, index=True)
 
 
-def aggregate_model_cl_preds(eModel, cl_dict, prob_cl_dict):
-    model_prob_dict = {
-        cl: proba.loc[:, proba.columns.str.startswith(eModel.name)]
-        for cl, proba in prob_cl_dict.items()
-    }
-    cl_v_corr_d = {
-        cl: cl_dict[cl]['models'][eModel.name]['valid_eval']['valid_corr_mean']
-        for cl in model_prob_dict.keys()
-    }
-    cl_w_d = {
-        cl: cl_v_corr
-        for cl, cl_v_corr in cl_v_corr_d.items() if cl_v_corr > 0
-    }
-    total_w = sum([w for cl, w in cl_w_d.items()])
-    print("pred_cl_dict: ", model_prob_dict)
-    full_pred_model = sum(model_prob_dict[cl] * cl_w
-                          for cl, cl_w in cl_w_d.items()) / total_w
-    return full_pred_model
-
-
 def aggr_rank(rank_dict, aggr_dict, data_t):
 
     valid_target = load_validation_target()
@@ -176,28 +156,21 @@ def make_prediction_fst(strat_dir, model_dict, aggr_dict, data_types_files):
     model_types = [
         ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
     ]
+    clusters_dict = model_dict['clusters']
 
     if 'final_pred' not in model_dict:
         model_dict['final_pred'] = dict()
 
     file_w_h = {d_t: True for d_t, *_ in data_types_files}
     print("file_w_h: ", file_w_h)
+
     for data_t, fpath, cl_fn in data_types_files:
-        # eras_df = eras_type_df.loc[eras_type_df['data_type'] == data_t]
-        # eras_list = eras_df['era'].drop_duplicates().values
-
-        # eras_batches = list_chunks(
-        #     eras_list) if data_t is not VALID_TYPE else [eras_list]
-
-        clusters_dict = model_dict['clusters']
 
         rank_dict = {
             cl: {eModel.name: pd.DataFrame()
                  for eModel in model_types}
             for cl in clusters_dict.keys()
         }
-        #for era_b in eras_batches:
-        #    print("era_b: ", era_b)
 
         for cl, _ in clusters_dict.items():
             cl_fp = strat_dir + '/' + cl + '/' + cl_fn
@@ -216,6 +189,40 @@ def make_prediction_fst(strat_dir, model_dict, aggr_dict, data_types_files):
 
         with open(fpath, 'w') as f:
             all_preds.to_csv(f, header=file_w_h[data_t], index=True)
+            file_w_h[data_t] = False
+
+
+def make_compute_pred(strat_dir, aggr_desc, data_types_files):
+
+    aggr_l = {"16": aggr_desc}
+    print("aggr_l: ", aggr_l)
+
+    load_cl_m_dict = dict()
+    for cl, model, w in aggr_l['16']['cluster_models']:
+        if cl not in load_cl_m_dict.keys():
+            load_cl_m_dict[cl] = [model]
+        else:
+            load_cl_m_dict[cl].append(model)
+
+    file_w_h = {d_t: True for d_t, *_ in data_types_files}
+    for data_t, fpath, cl_fn in data_types_files:
+
+        rank_dict = {
+            cl: {model: pd.DataFrame()
+                 for model in cl_models}
+            for cl, cl_models in load_cl_m_dict.items()
+        }
+
+        for cl, model_n, weight in aggr_desc['cluster_models']:
+            cl_fp = strat_dir + '/' + cl + '/' + cl_fn
+            cl_rank = load_data(cl_fp, cols=['id', model_n])
+            rank_dict[cl][model_n] = cl_rank
+
+        rank_aggr_pred_dict = aggr_rank(rank_dict, aggr_l, data_t)
+        aggr_pred = rank_aggr_pred_dict["16"]
+
+        with open(fpath, 'w') as f:
+            aggr_pred.to_csv(f, header=file_w_h[data_t], index=True)
             file_w_h[data_t] = False
 
 
@@ -287,12 +294,10 @@ def make_prediction(strat_dir, strat, layer):
     model_dict = load_json(model_dict_fp)
     aggr_dict = load_json(model_aggr_fp)
 
+    start_time = time.time()
+
     if 'final_pred' not in model_dict.keys():
         model_dict['final_pred'] = dict()
-
-    start_time = time.time()
-    eras_type_df = load_eras_data_type()
-    print("--- %s seconds ---" % (time.time() - start_time))
 
     if layer == 'fst':
         predictions_fst_fp = [
@@ -304,7 +309,12 @@ def make_prediction(strat_dir, strat, layer):
         ]
         data_types_files = list(
             zip(PREDICTION_TYPES, predictions_fst_fp, proba_cl_fn))
-        make_prediction_fst(strat_dir, model_dict, aggr_dict, data_types_files)
+        if COMPUTE_BOOL:
+            compute_aggr = aggr_dict['16']
+            make_compute_pred(strat_dir, compute_aggr, data_types_files)
+        else:
+            make_prediction_fst(strat_dir, model_dict, aggr_dict,
+                                data_types_files)
 
     if layer == 'snd':
 
