@@ -22,6 +22,7 @@ class PredictionOperator():
         print("model_type: ", model_type)
         print("model_prefix: ", model_prefix)
         model_dirname = os.path.dirname(model_path)
+        print("model_path: ", model_path)
         model = load_model(model_dirname, model_type, model_prefix)
 
         prediction_proba = model.predict_proba(input_data)
@@ -41,7 +42,7 @@ class PredictionOperator():
 
         cl_ft = cluster['selected_features']
         input_data_ft = input_data[cl_ft]
-        input_target = input_data[TARGET_LABEL]
+        # input_target = input_data[TARGET_LABEL]
 
         models_proba_full = pd.DataFrame(dtype=np.float32)
         for col in models_proba_full.columns:
@@ -125,24 +126,20 @@ class PredictionOperator():
 
     def make_snd_layer_predict(self, data_df, bSnd=True):
 
-        if 'era' in data_df.columns:
-            data_df = data_df.drop('era', axis=1)
-
-        if TARGET_LABEL in data_df.columns:
-            data_df = data_df.drop(TARGET_LABEL, axis=1)
-
         snd_layer_desc = self.model_const['snd_layer']
         gen_model = snd_layer_desc['models']['gen_models'] if bSnd else {}
 
         full_proba = pd.DataFrame()
-        for model_desc in gen_model:
+        for eModel in self.model_types:
 
-            eModel = ModelType[model_desc['type']]
-
-            if not (eModel in self.model_types):
+            if eModel.name not in gen_model:
                 continue
 
-            prefix = model_desc['prefix']
+            model_desc = gen_model[eModel.name]
+            print("model_name: ", eModel.name)
+            print("model_desc: ", model_desc)
+
+            prefix = None
             model_fp = model_desc['model_filepath']
 
             pred_model_proba = self._model_predict_proba(

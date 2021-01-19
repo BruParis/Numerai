@@ -7,7 +7,7 @@ BENCHMARK = 0
 BAND = 0.2
 
 
-def load_validation_target():
+def load_target():
     file_reader = ReaderCSV(TOURNAMENT_DATA_FP)
     input_data = file_reader.read_csv_matching('data_type', [VALID_TYPE],
                                                columns=['id', 'era', 'target'
@@ -85,14 +85,16 @@ def pred_valid_score(validation_data, pred_col_name):
 
 
 def models_valid_score(models_dict, model_types, pred_models_df):
-    valid_df = load_validation_target()
+    data_target_df = load_target()
+    print('target_df: ', data_target_df)
 
-    valid_df = pd.concat([valid_df, pred_models_df], axis=1)
+    data_target_df = pd.concat([data_target_df, pred_models_df], axis=1)
 
+    print('data_target_df: ', data_target_df)
     print('model_types: ', model_types)
 
     models_scores = {
-        model.name: pred_valid_score(valid_df, model.name)
+        model.name: pred_valid_score(data_target_df, model.name)
         for model in model_types
     }
 

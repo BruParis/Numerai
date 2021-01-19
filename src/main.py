@@ -12,7 +12,7 @@ from reader import set_h5_stores
 from prediction import make_prediction, cluster_proba, snd_layer_training_data, upload_results
 
 ALL_OPERATIONS = [
-    'set_h5', 'ft_era_corr', 'split_data', 'train', 'proba', 'prediction',
+    'set_h5', 'ft_era_corr', 'set_data', 'train', 'proba', 'prediction',
     'upload'
 ]
 
@@ -52,14 +52,14 @@ def print_funct_calls(layers, strategies, operations_q):
                     if op == 'ft_era_corr':
                         print('   --> feature_era_corr')
                         continue
-                    if op == 'split_data':
+                    if op == 'set_data':
                         if stra == STRAT_CLUSTER:
                             print('   --> clustering')
                         print('   --> split_data_clusters')
                         continue
 
                 elif l == 'snd':
-                    if op == 'split_data':
+                    if op == 'set_data':
                         print('   --> snd_layer_training_data')
                         continue
                     elif op == 'train':
@@ -173,15 +173,15 @@ def main(argv):
                 if op == 'upload':
                     upload_results(strat_dir, l)
                     break
+                if op == 'prediction':
+                    make_prediction(strat_dir, stra, l)
+                    continue
 
                 if l == 'fst':
                     if op == 'proba':
                         cluster_proba(strat_dir, stra)
                         continue
-                    if op == 'prediction':
-                        make_prediction(strat_dir, stra, l)
-                        continue
-                    if op == 'split_data':
+                    if op == 'set_data':
                         if stra == STRAT_CLUSTER:
                             clustering(strat_dir)
                         elif stra == STRAT_ERA_SIMPLE:
@@ -190,7 +190,7 @@ def main(argv):
                         continue
 
                 elif l == 'snd':
-                    if op == 'split_data':
+                    if op == 'set_data':
                         snd_layer_training_data(stra)
                         continue
 

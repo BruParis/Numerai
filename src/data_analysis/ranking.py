@@ -56,6 +56,9 @@ def rank_proba_models(proba, models):
         model_rank_df = rank_proba(model_proba, model_name)
         res = pd.concat([res, model_rank_df], axis=1)
 
+    if 'era' in proba.columns:
+        res = pd.concat([res, proba.loc[:, 'era']], axis=1)
+
     return res
 
 

@@ -226,39 +226,59 @@ def make_compute_pred(strat_dir, aggr_desc, data_types_files):
             file_w_h[data_t] = False
 
 
-def make_prediction_snd(strat, strat_dir, model_dict, data_types_fp,
+def make_prediction_snd(strat, strat_dir, model_dict, aggr_dict, data_types_fp,
                         model_types):
-    for data_type, fst_layer_path, snd_layer_path in data_types_fp:
+    for data_type, fst_layer_fn, snd_layer_path in data_types_fp:
 
-        if not os.path.exists(fst_layer_path):
-            print("fst layer file not found at:", fst_layer_path)
-            continue
+        cluster_n = model_dict['clusters']
+        model_input_col = model_dict[SND_LAYER]['models']['input_columns']
 
-        print("fst_layer_path: ", fst_layer_path)
-        fst_layer_data = load_data(fst_layer_path)
+        all_cl_pred = pd.DataFrame()
+        for cl in cluster_n:
+            print("cl: ", cl)
+            cl_pred_fp = strat_dir + '/' + cl + '/' + fst_layer_fn
 
-        pred_cols = model_dict[SND_LAYER]['models']['input_columns']
-        print("pred_cols: ", pred_cols)
-        print("fst_layer_data col: ", fst_layer_data.columns)
-        print("fst_layer_data: ", fst_layer_data)
-        fst_layer_cl_data = fst_layer_data.loc[:, pred_cols]
+            if not os.path.exists(cl_pred_fp):
+                print("fst layer file not found at:", cl_pred_fp)
+                continue
+
+            cl_pred_cols = ['id'] + [
+                col.replace(cl + '_', '')
+                for col in model_input_col if cl + '_' in col
+            ]
+
+            cl_pred_data = load_data(cl_pred_fp, cols=cl_pred_cols)
+            cl_pred_data = cl_pred_data.add_prefix(cl + '_')
+            all_cl_pred = pd.concat([all_cl_pred, cl_pred_data], axis=1)
+
+        print("all_cl_pred cols: ", all_cl_pred.columns)
+        all_cl_pred = all_cl_pred.reindex(columns=model_input_col)
+        print("all_cl_pred reorder cols: ", all_cl_pred.columns)
 
         pred_op = PredictionOperator(strat,
                                      strat_dir,
                                      model_dict,
                                      model_types,
-                                     data_type,
-                                     bMultiProcess=True)
+                                     bMultiProc=True)
 
-        snd_layer_pred_data = pred_op.make_snd_layer_predict(fst_layer_cl_data)
-        snd_layer_rank_data = rank_proba_models(snd_layer_pred_data,
+        snd_layer_proba_data = pred_op.make_snd_layer_predict(all_cl_pred)
+        print("snd_layer_proba_data: ", snd_layer_proba_data)
+        snd_layer_rank_data = rank_proba_models(snd_layer_proba_data,
                                                 model_types)
 
-        print('snd_layer_pred_data: ', snd_layer_pred_data)
+        print('snd_layer_pred_data: ', snd_layer_proba_data)
         print('snd_layer_rank_data: ', snd_layer_rank_data)
+        snd_layer_full_data = pd.concat(
+            [snd_layer_proba_data, snd_layer_rank_data], axis=1)
+
+        if data_type == VALID_TYPE:
+            if SND_LAYER not in aggr_dict.keys():
+                aggr_dict[SND_LAYER] = dict()
+            models_valid_score(aggr_dict[SND_LAYER], model_types,
+                               snd_layer_full_data)
 
         with open(snd_layer_path, 'w') as f:
-            snd_layer_rank_data.to_csv(f, index=True)
+            snd_layer_full_data.to_csv(f, index=True)
 
 
 def make_cluster_predict(strat_dir, strat, cl):
@@ -267,10 +287,10 @@ def make_cluster_predict(strat_dir, strat, cl):
     model_dict = load_json(model_dict_fp)
     eras_type_df = load_eras_data_type()
 
-    model_types = [
-        ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
-    ]
-    # model_types = [ModelType.NeuralNetwork]
+    # model_types = [
+    #     ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
+    # ]
+    model_types = [ModelType.NeuralNetwork]
 
     cl_dir = strat_dir + '/' + cl
     pred_fp = [
@@ -318,29 +338,26 @@ def make_prediction(strat_dir, strat, layer):
 
     if layer == 'snd':
 
-        filename = PREDICTIONS_FILENAME
-
-        filename_label = filename.replace('predictions_', 'pred_label_')
-        predictions_fst_fp = [
-            strat_dir + '/' + filename_label + d_t + PRED_FST_SUFFIX
-            for d_t in PREDICTION_TYPES
+        # Fst layer
+        pred_fst_fn = [
+            PROBA_FILENAME + d_t + '.csv' for d_t in PREDICTION_TYPES
         ]
-        data_types_fst_fp = list(zip(PREDICTION_TYPES, predictions_fst_fp))
 
         # Snd layer
         pred_snd_fp = [
-            strat_dir + '/' + PREDICTIONS_FILENAME + d_t + PRED_SND_SUFFIX
-            for d_t in PREDICTION_TYPES
+            strat_dir + '/' + PREDICTIONS_FILENAME + d_t +
+            LAYER_PRED_SUFFIX[SND_LAYER] for d_t in PREDICTION_TYPES
         ]
         data_types_snd_fp = list(
-            zip(PREDICTION_TYPES, predictions_fst_fp, pred_snd_fp))
+            zip(PREDICTION_TYPES, pred_fst_fn, pred_snd_fp))
 
-        model_types_snd = [
-            ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
-        ]
+        # model_types_snd = [
+        #     ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
+        # ]
+        model_types_snd = [ModelType.NeuralNetwork]
 
-        make_prediction_snd(strat, strat_dir, model_dict, data_types_snd_fp,
-                            model_types_snd)
+        make_prediction_snd(strat, strat_dir, model_dict, aggr_dict,
+                            data_types_snd_fp, model_types_snd)
 
     print("--- %s seconds ---" % (time.time() - start_time))
 

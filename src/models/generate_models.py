@@ -22,9 +22,9 @@ from .model_generator import ModelGenerator
 # min_leaf : >= 4
 
 
-def load_data(data_filename):
+def load_data(data_filename, cols=None):
     file_reader = ReaderCSV(data_filename)
-    data_df = file_reader.read_csv().set_index("id")
+    data_df = file_reader.read_csv(columns=cols).set_index("id")
 
     return data_df
 
@@ -134,7 +134,7 @@ def make_snd_layer_model_params(eModel, model_prefix=None):
     if eModel == ModelType.NeuralNetwork:
         num_layers = [1]  # np.linspace(start=1, stop=4, num=1)
         layer_size_factor = [0.66]  # [0.33, 0.5, 0.66]
-        train_batch_size = [50000]
+        train_batch_size = [500]
         num_epoch = [25]
         model_params_array = map(
             lambda x: {
@@ -335,94 +335,104 @@ def load_data_filter_id(data_filename, list_id, columns=None):
     return data_df
 
 
-def snd_layer_model_build(cl_dict,
+def snd_layer_model_build(aggr_dict,
                           snd_layer_dirname,
-                          full_train_data,
+                          train_data_fp,
+                          valid_data_fp,
                           bSaveModel=False,
                           bMetrics=False,
                           model_debug=False):
 
-    input_models = ['XGBoost', 'RandomForest', 'NeuralNetwork']
+    model_aggr_dict = dict()
 
-    f_train_data = pd.DataFrame()
-    for cl in cl_dict['clusters']:
-        aux_df = full_train_data.loc[:,
-                                     full_train_data.columns.str.
-                                     startswith(cl + '_')]
-        for i_m in input_models:
-            i_m_train_data = aux_df.loc[:, aux_df.columns.str.find(i_m) > -1]
-            f_train_data = pd.concat([f_train_data, i_m_train_data], axis=1)
-    f_train_target_data = pd.concat(
-        [f_train_data, full_train_data[TARGET_LABEL]], axis=1)
+    for aggr_id, aggr_const in aggr_dict.items():
 
-    print("f_train_data: ", f_train_target_data)
-    train_data, test_data = train_test_split(f_train_target_data,
-                                             test_size=TEST_RATIO)
+        input_cols = [
+            cl + '_' + m for cl, m, _ in aggr_const['cluster_models']
+        ]
+        data_cols = ['id', 'era', TARGET_LABEL] + input_cols
+        f_train_target_data = load_data(train_data_fp, cols=data_cols)
+        f_valid_target_data = load_data(valid_data_fp, cols=data_cols)
 
-    # model_types = [
-    #     ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
-    # ]  # , ModelType.K_NN]
-    model_types = [ModelType.NeuralNetwork]
+        train_data, test_data = train_test_split(f_train_target_data,
+                                                 test_size=TEST_RATIO)
+        test_data['era'] = train_data['era']
 
-    model_generator = ModelGenerator(snd_layer_dirname)
-    train_input, train_target = model_generator.format_train_data(train_data)
+        model_types = [
+            ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
+        ]  # , ModelType.K_NN]
+        #model_types = [ModelType.NeuralNetwork]
 
-    model_l = dict()
-    model_l['input_models'] = input_models
-    model_l['input_columns'] = f_train_data.columns.tolist()
-    model_l['gen_models'] = []
+        model_generator = ModelGenerator(snd_layer_dirname)
+        train_input, train_target = model_generator.format_train_data(
+            train_data)
 
-    for model_type in model_types:
-        for model_prefix in make_model_prefix(model_type):
+        model_aggr_dict[aggr_id] = dict()
+        current_aggr_dict = model_aggr_dict[aggr_id]
+        current_aggr_dict['input_columns'] = input_cols
+        current_aggr_dict['gen_models'] = dict()
 
-            model_generator.start_model_type(model_type, model_prefix,
-                                             bMetrics)
+        for model_type in model_types:
+            for model_prefix in make_model_prefix(model_type):
 
-            model_params_array = make_snd_layer_model_params(
-                model_type, model_prefix)
+                model_generator.start_model_type(model_type, model_prefix,
+                                                 bMetrics)
 
-            best_ll = sys.float_info.max
-            for model_params in model_params_array:
+                model_params_array = make_snd_layer_model_params(
+                    model_type, model_prefix)
 
-                print("generate model")
-                model_generator.generate_model(model_params, model_debug)
-                model = model_generator.build_model(train_input, train_target)
-                model_dict = model_generator.evaluate_model(test_data)
-                print("model: ", model)
-                print("model_dict: ", model_dict)
+                best_ll = sys.float_info.max
+                for model_params in model_params_array:
 
-                log_loss = model_dict['log_loss']
+                    print("generate model")
+                    model_generator.generate_model(model_params, model_debug)
+                    model = model_generator.build_model(
+                        train_input, train_target)
+                    model_dict = model_generator.evaluate_model(
+                        f_valid_target_data)
+                    print("model: ", model)
+                    print("model_dict: ", model_dict)
 
-                if bSaveModel and (log_loss < best_ll):
-                    best_ll = log_loss
-                    filepath, configpath = model.save_model()
-                    model_dict['model_filepath'] = filepath
-                    model_dict['config_filepath'] = configpath
-                    model_l['gen_models'].append(model_dict)
+                    log_loss = model_dict['log_loss']
 
-    return model_l
+                    if bSaveModel and (log_loss < best_ll):
+                        best_ll = log_loss
+                        filepath, configpath = model.save_model()
+                        model_dict['model_filepath'] = filepath
+                        model_dict['config_filepath'] = configpath
+                        current_aggr_dict['gen_models'][
+                            model_type.name] = model_dict
+
+    return model_aggr_dict
 
 
 def generate_snd_layer_model(dirname, bDebug, bMetrics, bSaveModel):
     snd_layer_dirname = dirname + '/' + SND_LAYER_DIRNAME
 
-    snd_layer_train_data_fp = dirname + '/' + PRED_TRAIN_FILENAME
-    snd_layer_train_data = load_data(snd_layer_train_data_fp)
+    snd_layer_train_data_fp = dirname + '/' + SND_LAYER_DIRNAME + '/' + PRED_TRAIN_FILENAME
+    #snd_layer_train_data = load_data(snd_layer_train_data_fp)
 
-    print("snd_layer_training_data.columns: ", snd_layer_train_data.columns)
+    snd_layer_valid_data_fp = dirname + '/' + SND_LAYER_DIRNAME + '/' + PREDICTIONS_FILENAME + VALID_TYPE + PRED_FST_SUFFIX
+    #snd_layer_valid_data = load_data(snd_layer_valid_data_fp)
+
+    #print("snd_layer_training_data.columns: ", snd_layer_train_data.columns)
+    #print("snd_layer_valid_data.columns: ", snd_layer_valid_data.columns)
 
     model_c_filepath = dirname + '/' + MODEL_CONSTITUTION_FILENAME
     cl_dict = load_json(model_c_filepath)
+    agg_filepath = dirname + '/' + MODEL_AGGREGATION_FILENAME
+    aggr_dict = load_json(agg_filepath)
 
-    model_dict_sub_l = snd_layer_model_build(cl_dict,
-                                             snd_layer_dirname,
-                                             snd_layer_train_data,
-                                             bSaveModel=bSaveModel,
-                                             bMetrics=bMetrics,
-                                             model_debug=bDebug)
+    model_aggr = snd_layer_model_build(aggr_dict,
+                                       snd_layer_dirname,
+                                       snd_layer_train_data_fp,
+                                       snd_layer_valid_data_fp,
+                                       bSaveModel=bSaveModel,
+                                       bMetrics=bMetrics,
+                                       model_debug=bDebug)
 
     if bSaveModel:
-        cl_dict[SND_LAYER]['models'] = model_dict_sub_l
+        cl_dict[SND_LAYER]['models'] = model_aggr
         print("cl_dict: ", cl_dict[SND_LAYER])
 
         with open(model_c_filepath, 'w') as fp:
@@ -433,7 +443,7 @@ def generate_models(strat_dir, strat, layer):
 
     bDebug = True
     bMetrics = True
-    bSaveModel = False
+    bSaveModel = True
 
     bMultiProc = False
     bSaveModelDict = True
