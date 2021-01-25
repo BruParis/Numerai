@@ -6,8 +6,12 @@ from data_analysis import ft_target_corr
 from reader import load_h5_eras
 
 # CHOICE
-CL_THRESHOLD_FT_T_CORR = 0.10
-CL_THRESHOLD_FT_SCORE = 0.30
+# start : cluster
+# CL_THRESHOLD_FT_T_CORR = 0.10
+# CL_THRESHOLD_FT_SCORE = 0.30
+
+# # start : cluster_2
+CL_THRESHOLD_FT_SCORE = 0.50
 
 
 def plot_fts_score_t_corr(fts_scores_df, ft_t_corr):
@@ -23,7 +27,7 @@ def plot_fts_score_t_corr(fts_scores_df, ft_t_corr):
     plt.show()
 
 
-def feature_selection(era_l, cl_dict, data_fp):
+def cl_feature_selection(era_l, cl_dict, data_fp):
 
     for _, cl_caract in cl_dict.items():
         cl_fts_scores = [
@@ -53,7 +57,7 @@ def feature_selection(era_l, cl_dict, data_fp):
         #    cl_caract['eras_name'])]
         era_ft_t_corr = ft_target_corr(
             data_cl_eras_df, cl_fts_full_scores_df.index.tolist()).abs()
-        #plot_fts_score_t_corr(cl_fts_full_scores_df, era_ft_t_corr)
+        # plot_fts_score_t_corr(cl_fts_full_scores_df, era_ft_t_corr)
 
         # First, select n best ft by target corr
         era_ft_t_corr = era_ft_t_corr.sort_values(ascending=False)

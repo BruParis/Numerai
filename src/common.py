@@ -1,4 +1,5 @@
 ERA_CL_DIRNAME = 'data_clusters'
+ERA_CL_DIRNAME_2 = 'data_clusters_2'
 ERA_GRAPH_DIRNAME = 'data_graph'
 ERA_SIMPLE_DIRNAME = 'data_eras'
 ERA_CL_SUBDIR_PREFIX = 'cluster_'
@@ -7,10 +8,12 @@ DATA_DIRNAME = 'data'
 SND_LAYER_DIRNAME = 'snd_layer'
 
 STRAT_CLUSTER = 'cluster'
+STRAT_CLUSTER_2 = 'cluster_2'
 STRAT_ERA_GRAPH = 'era_graph'
 STRAT_ERA_SIMPLE = 'era'
 STRA_DIRNAME_DICT = {
     STRAT_CLUSTER: ERA_CL_DIRNAME,
+    STRAT_CLUSTER_2: ERA_CL_DIRNAME_2,
     STRAT_ERA_SIMPLE: ERA_SIMPLE_DIRNAME,
     STRAT_ERA_GRAPH: ERA_GRAPH_DIRNAME
 }
@@ -19,6 +22,9 @@ STRA_CL_PREFIX_DIR_DICT = {
     STRAT_ERA_SIMPLE: 'era',
     STRAT_ERA_GRAPH: 'cluster_'
 }
+
+CL_SELECTED_FT_MUT_I = ERA_CL_DIRNAME_2 + '/selected_ft_mut_i_matrix.csv'
+CL_SELECTED_FT_JSON = ERA_CL_DIRNAME_2 + '/selected_ft.json'
 
 TRAINING_DATA_FP = DATA_DIRNAME + '/numerai_training_data.csv'
 TRAINING_STORE_H5_FP = DATA_DIRNAME + '/training_store.h5'
@@ -37,6 +43,9 @@ CORR_THRESHOLD = 0.036
 COL_PROBA_NAMES = [
     'proba_0.0', 'proba_0.25', 'proba_0.5', 'proba_0.75', 'proba_1.0'
 ]
+
+ERAS_FT_TARGET_MI_FP = DATA_DIRNAME + '/eras_features_target_mi.csv'
+MI_MAT_FP = DATA_DIRNAME + '/mut_i_mat.csv'
 
 FST_LAYER_TRAIN_RATIO = 0.20
 TEST_RATIO = 0.10

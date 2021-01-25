@@ -1,4 +1,4 @@
-from .era_linkage import EraLinkage
+from .era_ft_linkage import EraFTLinkage
 from .cl_feature_selection import cl_feature_selection
 from common import *
 from reader import ReaderCSV
@@ -17,7 +17,8 @@ import scipy.cluster.hierarchy as sch
 from scipy.cluster.hierarchy import fcluster
 sns.set_theme(color_codes=True)
 
-MIN_NUM_ERAS = 3
+# MIN_NUM_ERAS = 3
+MIN_NUM_ERAS = 8
 
 
 def plot_mat(data):
@@ -30,7 +31,11 @@ def plot_mat(data):
     plt.show()
 
 
-def plot_matrix_clustering(era_l, era_cl_dict, bSave=False, bShow=True):
+def plot_matrix_clustering(strat_dir,
+                           era_l,
+                           era_cl_dict,
+                           bSave=False,
+                           bShow=True):
 
     num_eras, _ = era_l.era_score_mat.shape
 
@@ -75,7 +80,7 @@ def plot_matrix_clustering(era_l, era_cl_dict, bSave=False, bShow=True):
         plt.show()
 
     if bSave:
-        fig.savefig(ERA_CL_DIRNAME + '/dendrogram.png')
+        fig.savefig(strat_dir + '/dendrogram.png')
 
     return
 
@@ -194,24 +199,24 @@ def aggregate_small_clusters(era_l, cl_dict):
     return cl_dict
 
 
-def eras_clustering(era_l):
+def eras_clustering(strat_dir, era_l):
 
     era_l.compute_eras_linkage()
 
     # seaborn to compare methods
     era_corr_t_corr_clusters = sns.clustermap(era_l.era_score_mat)
-    era_corr_t_corr_clusters.savefig(ERA_CL_DIRNAME + '/matrix_clustering.png')
+    era_corr_t_corr_clusters.savefig(strat_dir + '/matrix_clustering.png')
 
-    # t_l = [0.07, 0.5, 0.94071673, 0.95, 1, 1.01, 1.02, 1.023]
-    # t_l = [0.01, 0.06, 0.07, 0.08, 0.09, 1, 1.2, 1.3, 1.4]
-    # t_l = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+    # t_l = [1, 1.05, 1.1, 1.11, 1.12, 1.13, 1.14, 1.15]
+    # t_l = [0.07, 0.5, 0.95, 1, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3]
     # for crit in t_l:
-    #     era_cluster_idx = fcluster(
-    #         era_l.linkage, criterion='inconsistent', t=crit)
-    #     clusters = set(era_cluster_idx)
-    #     era_cl_dict = {cl: find_value_indexes(
-    #         era_cluster_idx, cl) for cl in clusters}
-    #     plot_matrix_clustering(era_l, era_cl_dict)
+    #     print("crit: ", crit)
+    #     era_cluster_idx = fcluster(era_l.linkage,
+    #                                criterion='inconsistent',
+    #                                t=crit)
+    #     era_cl_dict = set_cl_dict(era_l, era_cluster_idx)
+
+    #    plot_matrix_clustering(strat_dir, era_l, era_cl_dict)
 
     # criteria_l = np.linspace(start=0.05, stop=1.95, num=20)
     # for cr in criteria_l:
@@ -229,12 +234,16 @@ def eras_clustering(era_l):
                                t=criteria)
     era_cl_dict = set_cl_dict(era_l, era_cluster_idx)
 
-    plot_matrix_clustering(era_l, era_cl_dict, bSave=True)
+    plot_matrix_clustering(strat_dir, era_l, era_cl_dict, bSave=True)
 
     full_era_cl_dict = aggregate_small_clusters(era_l, era_cl_dict)
 
     #plot_matrix_clustering(era_l, full_era_cl_dict, bSave=True, bShow=False)
-    plot_matrix_clustering(era_l, full_era_cl_dict, bSave=False, bShow=True)
+    plot_matrix_clustering(strat_dir,
+                           era_l,
+                           full_era_cl_dict,
+                           bSave=False,
+                           bShow=True)
 
     return full_era_cl_dict
 
@@ -251,39 +260,44 @@ def save_clusters(model_c, era_l, era_cl_dict, corr_data_idx):
     era_cross_score_df.to_csv(ERA_CROSS_SCORE_FP)
 
 
-def make_cl_dir():
+def make_cl_dir(strat_dir):
     bDirAlready = False
     try:
-        os.makedirs(ERA_CL_DIRNAME)
+        os.makedirs(strat_dir)
     except OSError as e:
         bDirAlready = e.errno == errno.EEXIST
         if not bDirAlready:
-            print("Error with : make dir ", ERA_CL_DIRNAME)
+            print("Error with : make dir ", strat_dir)
             exit(1)
 
     if not bDirAlready:
-        cl_c_filename = ERA_CL_DIRNAME + '/model_constitution.json'
+        cl_c_filename = strat_dir + '/model_constitution.json'
         cl_c = ModelConstitution(cl_c_filename)
         cl_c.eras_ft_t_corr_file = ERAS_FT_T_CORR_FP
         cl_c.save()
 
 
-def clustering(dirname):
+def clustering_2(strat_dir):
     print(" -> clustering")
 
-    make_cl_dir()
+    make_cl_dir(strat_dir)
 
-    model_c = ModelConstitution(dirname + '/' + MODEL_CONSTITUTION_FILENAME)
+    model_c = ModelConstitution(strat_dir + '/' + MODEL_CONSTITUTION_FILENAME)
     model_c.load()
 
-    file_reader = ReaderCSV(model_c.eras_ft_t_corr_file)
-    corr_data_df = file_reader.read_csv().set_index("era")
+    file_reader = ReaderCSV(MI_MAT_FP)
+    corr_data_df = file_reader.read_csv()
+    new_col = corr_data_df.columns.values
+    new_col[0] = 'id'
+    corr_data_df.columns = new_col
+    corr_data_df = corr_data_df.set_index('id')
+
     # corr_data_df = corr_data_df.iloc[0: 40]
     # era_i/js must all have same features
-    era_l = EraLinkage(corr_data_df)
+    era_l = EraFTLinkage(corr_data_df)
     # plot_mat(era_l.era_score_mat)
-    era_cl_dict = eras_clustering(era_l)
+    era_cl_dict = eras_clustering(strat_dir, era_l)
 
     cl_feature_selection(era_l, era_cl_dict, TRAINING_STORE_H5_FP)
 
-    save_clusters(model_c, era_l, era_cl_dict, corr_data_df.index)
+    save_clusters(model_c, era_l, era_cl_dict, era_l.eras)

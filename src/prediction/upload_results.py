@@ -53,7 +53,7 @@ def upload_results(strat_dir, pred_l):
     pred_test_fp = strat_dir + '/' + PREDICTIONS_FILENAME + TEST_TYPE + '_' + pred_l_suffix + '.csv'
     pred_live_fp = strat_dir + '/' + PREDICTIONS_FILENAME + LIVE_TYPE + '_' + pred_l_suffix + '.csv'
 
-    pred_method = 'aggr_pred_16'
+    pred_method = 'aggr_pred_11'
 
     valid_data = load_predict_file(pred_validation_fp, pred_method)
     test_data = load_predict_file(pred_test_fp, pred_method)

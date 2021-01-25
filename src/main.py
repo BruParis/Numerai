@@ -5,15 +5,16 @@ from collections import deque
 
 from common import *
 from data_analysis import feature_era_corr
-from clustering import clustering, simple_era_clustering
+from clustering import clustering, clustering_2, simple_era_clustering
 from format_data import split_data_clusters
+from feature_analysis import ft_target_mut_i, ft_selection, eras_mut_info
 from models import generate_models, generate_cl_model
 from reader import set_h5_stores
 from prediction import make_prediction, cluster_proba, snd_layer_training_data, upload_results
 
 ALL_OPERATIONS = [
-    'set_h5', 'ft_era_corr', 'set_data', 'train', 'proba', 'prediction',
-    'upload'
+    'h5', 'ft_era_corr', 'ft_sel', 'mut_i', 'set_data', 'train', 'proba',
+    'prediction', 'upload'
 ]
 
 
@@ -26,7 +27,7 @@ def print_funct_calls(layers, strategies, operations_q):
         op = o_aux.popleft()
         print("op: ", op)
 
-        if op == 'set_h5':
+        if op == 'h5':
             print('   --> set_h5_stores')
             continue
 
@@ -34,6 +35,14 @@ def print_funct_calls(layers, strategies, operations_q):
             print(" strat: ", stra)
             for l in l_aux:
                 print('  layer: ', l)
+                if op == 'ft_sel':
+                    print('   --> ft_sel')
+                    continue
+
+                if op == 'mut_i':
+                    print('   --> mut_i')
+                    continue
+
                 if op == 'proba':
                     print('   --> make_proba')
                     continue
@@ -84,7 +93,7 @@ def main_l_0(strategies, operations_q, argv, arg_parser):
         op = operations_q.popleft()
         print("op: ", op)
 
-        if op == 'set_h5':
+        if op == 'h5':
             set_h5_stores()
             continue
 
@@ -153,17 +162,27 @@ def main(argv):
         op = operations_q.popleft()
         print("op: ", op)
 
-        if op == 'set_h5':
+        if op == 'h5':
             set_h5_stores()
             continue
 
         for stra in strategies:
             print("strat: ", stra)
+            strat_dir = STRA_DIRNAME_DICT[stra]
+            if op == 'ft_sel':
+                print('   --> ft_sel')
+                ft_selection(strat_dir)
+                continue
+
+            if op == 'mut_i':
+                print('   --> ft_sel')
+                eras_mut_info(strat_dir)
+                continue
+
             if stra == STRAT_CLUSTER and op == 'ft_era_corr':
                 feature_era_corr(TRAINING_DATA_FP, TRAINING_STORE_H5_FP)
                 continue
 
-            strat_dir = STRA_DIRNAME_DICT[stra]
             for l in layers:
                 print("layer: ", l)
 
@@ -184,6 +203,8 @@ def main(argv):
                     if op == 'set_data':
                         if stra == STRAT_CLUSTER:
                             clustering(strat_dir)
+                        elif stra == STRAT_CLUSTER_2:
+                            clustering_2(strat_dir)
                         elif stra == STRAT_ERA_SIMPLE:
                             simple_era_clustering(strat_dir)
                         split_data_clusters(strat_dir)
