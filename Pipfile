@@ -6,6 +6,7 @@ verify_ssl = true
 [dev-packages]
 pylint = "*"
 autopep8 = "*"
+pipenv-setup = "*"
 
 [packages]
 numpy = "*"
@@ -21,6 +22,9 @@ pylint = "*"
 keras = "*"
 tensorflow = "*"
 tables = "*"
+click = "*"
+setuptools = "*"
+aigovivo = {editable = true, path = "."}
 
 [requires]
 python_version = "3.8"
