@@ -1,7 +1,7 @@
 import json
 
 
-class ModelConstitution():
+class StratConstitution():
 
     def _extract_from_dict(self, m_dict):
 

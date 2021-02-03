@@ -7,7 +7,7 @@ from ..common import *
 from ..data_analysis import rank_proba_models
 from ..reader import ReaderCSV, load_h5_eras
 from ..models import ModelType
-from ..strat import ModelConstitution
+from ..strat import StratConstitution
 
 from .prediction_operator import PredictionOperator
 
@@ -90,7 +90,7 @@ def make_cluster_proba(strat_dir, model_dict, model_types, data_types,
 
 def cluster_proba(strat_dir, cl=None):
 
-    model_dict_fp = strat_dir + '/' + MODEL_CONSTITUTION_FILENAME
+    model_dict_fp = strat_dir + '/' + STRAT_CONSTITUTION_FILENAME
     model_dict = load_json(model_dict_fp)
     eras_type_df = load_eras_data_type()
 

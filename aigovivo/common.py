@@ -57,7 +57,7 @@ TEST_RATIO = 0.10
 # era_ft_corr
 ERAS_FT_T_CORR_FP = DATA_DIRNAME + '/eras_ft_target_corr.csv'
 
-MODEL_CONSTITUTION_FILENAME = 'model_constitution.json'
+STRAT_CONSTITUTION_FILENAME = 'strat_constitution.json'
 MODEL_AGGREGATION_FILENAME = 'model_aggregations.json'
 ERA_CROSS_SCORE_FP = ERA_CL_DIRNAME + '/era_cross_score.csv'
 

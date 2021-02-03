@@ -5,7 +5,7 @@ import time
 import itertools as it
 
 from ..common import *
-from ..strat import ModelConstitution
+from ..strat import StratConstitution
 from ..reader import ReaderCSV, load_h5_eras
 from ..models import ModelType
 from ..data_analysis import models_valid_score, proba_to_target_label, rank_proba_models, rank_proba, rank_pred, valid_score
@@ -85,8 +85,7 @@ def single_cluster_pred(strat_dir, model_dict, model_types, data_types_fp,
         pred_op = PredictionOperator(strat_dir,
                                      model_dict,
                                      model_types,
-                                     data_t,
-                                     bMultiProcess=False)
+                                     bMultiProc=False)
 
         cl_proba_batches = pd.DataFrame()
 
@@ -283,7 +282,7 @@ def make_prediction_snd(strat_dir, model_dict, aggr_dict, data_types_fp,
 
 def make_cluster_predict(strat_dir, cl):
 
-    model_dict_fp = strat_dir + '/' + MODEL_CONSTITUTION_FILENAME
+    model_dict_fp = strat_dir + '/' + STRAT_CONSTITUTION_FILENAME
     model_dict = load_json(model_dict_fp)
     eras_type_df = load_eras_data_type()
 
@@ -309,7 +308,7 @@ def make_cluster_predict(strat_dir, cl):
 def make_prediction(strat_dir, layer):
     print('data_types: ', PREDICTION_TYPES)
 
-    model_dict_fp = strat_dir + '/' + MODEL_CONSTITUTION_FILENAME
+    model_dict_fp = strat_dir + '/' + STRAT_CONSTITUTION_FILENAME
     model_aggr_fp = strat_dir + '/' + MODEL_AGGREGATION_FILENAME
     model_dict = load_json(model_dict_fp)
     aggr_dict = load_json(model_aggr_fp)

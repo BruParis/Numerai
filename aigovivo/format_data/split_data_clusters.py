@@ -6,7 +6,7 @@ import os
 import errno
 import json
 
-from ..strat import ModelConstitution
+from ..strat import StratConstitution
 from ..reader import ReaderCSV, load_h5_eras
 from ..common import *
 
@@ -49,7 +49,7 @@ def generate_data_cluster(dirname, cl_data_df, cl_name, cl_fts):
 
 def split_data_clusters(dirname):
 
-    model_c = ModelConstitution(dirname + '/' + MODEL_CONSTITUTION_FILENAME)
+    model_c = StratConstitution(dirname + '/' + STRAT_CONSTITUTION_FILENAME)
     model_c.load()
 
     for cl_name, cl_c in model_c.clusters.items():

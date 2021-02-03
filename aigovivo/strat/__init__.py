@@ -1,2 +1,2 @@
 from .strat import make_new_strat
-from .model_constitution import ModelConstitution
+from .strat_constitution import StratConstitution

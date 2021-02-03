@@ -37,7 +37,7 @@ def snd_layer_training_data(strat):
             print("Error with : make dir ", snd_layer_dirpath)
             exit(1)
 
-    model_dict_fp = cl_dirname + '/' + MODEL_CONSTITUTION_FILENAME
+    model_dict_fp = cl_dirname + '/' + STRAT_CONSTITUTION_FILENAME
     model_dict = load_json(model_dict_fp)
 
     pred_train_fp = snd_layer_dirpath + '/' + PRED_TRAIN_FILENAME

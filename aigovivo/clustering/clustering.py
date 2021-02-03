@@ -2,7 +2,7 @@ from .era_linkage import EraLinkage
 from .cl_feature_selection import cl_feature_selection
 from ..common import *
 from ..reader import ReaderCSV
-from ..strat import ModelConstitution
+from ..strat import StratConstitution
 
 import os
 import errno
@@ -263,7 +263,7 @@ def make_cl_dir():
 
     if not bDirAlready:
         cl_c_filename = ERA_CL_DIRNAME + '/model_constitution.json'
-        cl_c = ModelConstitution(cl_c_filename)
+        cl_c = StratConstitution(cl_c_filename)
         cl_c.eras_ft_t_corr_file = ERAS_FT_T_CORR_FP
         cl_c.save()
 
@@ -273,7 +273,7 @@ def clustering(dirname):
 
     make_cl_dir()
 
-    model_c = ModelConstitution(dirname + '/' + MODEL_CONSTITUTION_FILENAME)
+    model_c = StratConstitution(dirname + '/' + STRAT_CONSTITUTION_FILENAME)
     model_c.load()
 
     file_reader = ReaderCSV(model_c.eras_ft_t_corr_file)

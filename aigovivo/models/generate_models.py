@@ -265,7 +265,7 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
 
 def generate_cl_model(dirname, cl, bDebug, bMetrics, bSaveModel):
 
-    model_filepath = dirname + '/' + MODEL_CONSTITUTION_FILENAME
+    model_filepath = dirname + '/' + STRAT_CONSTITUTION_FILENAME
     model_dict = load_json(model_filepath)
     cl_dict = model_dict['clusters'][cl]
 
@@ -280,7 +280,7 @@ def generate_cl_model(dirname, cl, bDebug, bMetrics, bSaveModel):
 
 def generate_fst_layer_model(dirname, bDebug, bMetrics, bSaveModel, bMultiProc,
                              bSaveModelDict):
-    model_c_filepath = dirname + '/' + MODEL_CONSTITUTION_FILENAME
+    model_c_filepath = dirname + '/' + STRAT_CONSTITUTION_FILENAME
     model_a_filepath = dirname + '/' + MODEL_AGGREGATION_FILENAME
     model_dict = load_json(model_c_filepath)
     cl_dict = model_dict['clusters']
@@ -414,7 +414,7 @@ def generate_snd_layer_model(dirname, bDebug, bMetrics, bSaveModel):
     #print("snd_layer_training_data.columns: ", snd_layer_train_data.columns)
     #print("snd_layer_valid_data.columns: ", snd_layer_valid_data.columns)
 
-    model_c_filepath = dirname + '/' + MODEL_CONSTITUTION_FILENAME
+    model_c_filepath = dirname + '/' + STRAT_CONSTITUTION_FILENAME
     cl_dict = load_json(model_c_filepath)
     agg_filepath = dirname + '/' + MODEL_AGGREGATION_FILENAME
     aggr_dict = load_json(agg_filepath)
