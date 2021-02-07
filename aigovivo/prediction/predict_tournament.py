@@ -67,12 +67,12 @@ def list_chunks(lst):
         yield lst[i:i + ERA_BATCH_SIZE]
 
 
-def measure_cl_pred_valid_corr(model_dict, cl, model_types, cl_pred):
-    cl_models_dict = model_dict['clusters'][cl]['models']
+def measure_cl_pred_valid_corr(strat_c, cl, model_types, cl_pred):
+    cl_models_dict = strat_c.clusters[cl]['models']
     models_valid_score(cl_models_dict, model_types, cl_pred)
 
 
-def single_cluster_pred(strat_dir, model_dict, model_types, data_types_fp,
+def single_cluster_pred(strat_dir, strat_c, model_types, data_types_fp,
                         eras_type_df, cl):
 
     for data_t, fpath in data_types_fp:
@@ -83,7 +83,7 @@ def single_cluster_pred(strat_dir, model_dict, model_types, data_types_fp,
             eras_list) if data_t is not VALID_TYPE else [eras_list]
 
         pred_op = PredictionOperator(strat_dir,
-                                     model_dict,
+                                     strat_c,
                                      model_types,
                                      bMultiProc=False)
 
@@ -114,7 +114,7 @@ def single_cluster_pred(strat_dir, model_dict, model_types, data_types_fp,
         cl_rank = rank_proba_models(cl_proba_batches, model_types)
 
         if data_t == VALID_TYPE:
-            measure_cl_pred_valid_corr(model_dict, cl, model_types, cl_rank)
+            measure_cl_pred_valid_corr(strat_c, cl, model_types, cl_rank)
 
         with open(fpath, 'w') as f:
             cl_rank.to_csv(f, index=True)
@@ -151,15 +151,12 @@ def aggr_rank(rank_dict, aggr_dict, data_t):
     return aggr_pred_dict
 
 
-def make_prediction_fst(strat_dir, model_dict, aggr_dict, data_types_files):
+def make_prediction_fst(strat_dir, strat_c, aggr_dict, data_types_files):
 
     model_types = [
         ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
     ]
-    clusters_dict = model_dict['clusters']
-
-    if 'final_pred' not in model_dict:
-        model_dict['final_pred'] = dict()
+    clusters_dict = strat_c.clusters
 
     file_w_h = {d_t: True for d_t, *_ in data_types_files}
     print("file_w_h: ", file_w_h)
@@ -226,12 +223,12 @@ def make_compute_pred(strat_dir, aggr_desc, data_types_files):
             file_w_h[data_t] = False
 
 
-def make_prediction_snd(strat_dir, model_dict, aggr_dict, data_types_fp,
+def make_prediction_snd(strat_dir, strat_c, aggr_dict, data_types_fp,
                         model_types):
     for data_type, fst_layer_fn, snd_layer_path in data_types_fp:
 
-        cluster_n = model_dict['clusters']
-        model_input_col = model_dict[SND_LAYER]['models']['input_columns']
+        cluster_n = strat_c.clusters
+        model_input_col = strat_c.snd_layer['models']['input_columns']
 
         all_cl_pred = pd.DataFrame()
         for cl in cluster_n:
@@ -256,7 +253,7 @@ def make_prediction_snd(strat_dir, model_dict, aggr_dict, data_types_fp,
         print("all_cl_pred reorder cols: ", all_cl_pred.columns)
 
         pred_op = PredictionOperator(strat_dir,
-                                     model_dict,
+                                     strat_c,
                                      model_types,
                                      bMultiProc=True)
 
@@ -282,8 +279,10 @@ def make_prediction_snd(strat_dir, model_dict, aggr_dict, data_types_fp,
 
 def make_cluster_predict(strat_dir, cl):
 
-    model_dict_fp = strat_dir + '/' + STRAT_CONSTITUTION_FILENAME
-    model_dict = load_json(model_dict_fp)
+    strat_fp = strat_dir + '/' + STRAT_CONSTITUTION_FILENAME
+    strat_c = StratConstitution(strat_fp)
+    strat_c.load()
+
     eras_type_df = load_eras_data_type()
 
     # model_types = [
@@ -298,25 +297,23 @@ def make_cluster_predict(strat_dir, cl):
     ]
     data_types_fp = list(zip(PREDICTION_TYPES, pred_fp))
 
-    single_cluster_pred(strat_dir, model_dict, model_types, data_types_fp,
+    single_cluster_pred(strat_dir, strat_c, model_types, data_types_fp,
                         eras_type_df, cl)
 
-    with open(model_dict_fp, 'w') as fp:
-        json.dump(model_dict, fp, indent=4)
+    strat_c.save()
 
 
 def make_prediction(strat_dir, layer):
     print('data_types: ', PREDICTION_TYPES)
 
-    model_dict_fp = strat_dir + '/' + STRAT_CONSTITUTION_FILENAME
+    strat_c_fp = strat_dir + '/' + STRAT_CONSTITUTION_FILENAME
     model_aggr_fp = strat_dir + '/' + MODEL_AGGREGATION_FILENAME
-    model_dict = load_json(model_dict_fp)
+    strat_c = StratConstitution(strat_c_fp)
+    strat_c.load()
+
     aggr_dict = load_json(model_aggr_fp)
 
     start_time = time.time()
-
-    if 'final_pred' not in model_dict.keys():
-        model_dict['final_pred'] = dict()
 
     if layer == 'fst':
         predictions_fst_fp = [
@@ -332,7 +329,7 @@ def make_prediction(strat_dir, layer):
             compute_aggr = aggr_dict['16']
             make_compute_pred(strat_dir, compute_aggr, data_types_files)
         else:
-            make_prediction_fst(strat_dir, model_dict, aggr_dict,
+            make_prediction_fst(strat_dir, strat_c, aggr_dict,
                                 data_types_files)
 
     if layer == 'snd':
@@ -355,13 +352,12 @@ def make_prediction(strat_dir, layer):
         # ]
         model_types_snd = [ModelType.NeuralNetwork]
 
-        make_prediction_snd(strat_dir, model_dict, aggr_dict,
-                            data_types_snd_fp, model_types_snd)
+        make_prediction_snd(strat_dir, strat_c, aggr_dict, data_types_snd_fp,
+                            model_types_snd)
 
     print("--- %s seconds ---" % (time.time() - start_time))
 
-    with open(model_dict_fp, 'w') as fp:
-        json.dump(model_dict, fp, indent=4)
+    strat_c.save()
 
     with open(model_aggr_fp, 'w') as fp:
         json.dump(aggr_dict, fp, indent=4)

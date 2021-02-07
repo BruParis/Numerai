@@ -15,13 +15,6 @@ ERA_BATCH_SIZE = 32
 # ERA_BATCH_SIZE = 2
 
 
-def load_json(filepath):
-    with open(filepath, 'r') as f:
-        json_data = json.load(f)
-
-        return json_data
-
-
 def load_eras_data_type():
     file_reader = ReaderCSV(TOURNAMENT_DATA_FP)
     eras_df = file_reader.read_csv(
@@ -43,11 +36,11 @@ def list_chunks(lst):
         yield lst[i:i + ERA_BATCH_SIZE]
 
 
-def make_cluster_proba(strat_dir, model_dict, model_types, data_types,
+def make_cluster_proba(strat_dir, strat_c, model_types, data_types,
                        eras_type_df, cl_list):
 
     pred_op = PredictionOperator(strat_dir,
-                                 model_dict,
+                                 strat_c,
                                  model_types,
                                  bMultiProc=False)
     for d_t in data_types:
@@ -90,8 +83,10 @@ def make_cluster_proba(strat_dir, model_dict, model_types, data_types,
 
 def cluster_proba(strat_dir, cl=None):
 
-    model_dict_fp = strat_dir + '/' + STRAT_CONSTITUTION_FILENAME
-    model_dict = load_json(model_dict_fp)
+    strat_c_fp = strat_dir + '/' + STRAT_CONSTITUTION_FILENAME
+    strat_c = StratConstitution(strat_c_fp)
+    strat_c.load()
+
     eras_type_df = load_eras_data_type()
 
     model_types = [
@@ -99,6 +94,6 @@ def cluster_proba(strat_dir, cl=None):
     ]
     # model_types = [ModelType.NeuralNetwork]
 
-    cl_list = model_dict['clusters'].keys() if cl is None else [cl]
-    make_cluster_proba(strat_dir, model_dict, model_types, PREDICTION_TYPES,
+    cl_list = strat_c.clusters.keys() if cl is None else [cl]
+    make_cluster_proba(strat_dir, strat_c, model_types, PREDICTION_TYPES,
                        eras_type_df, cl_list)

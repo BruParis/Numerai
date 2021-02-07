@@ -102,35 +102,17 @@ def eras_clustering(era_l, features):
     return era_dict
 
 
-def make_cl_dir(strat_dir):
-    bDirAlready = False
-    try:
-        os.makedirs(strat_dir)
-    except OSError as e:
-        bDirAlready = e.errno == errno.EEXIST
-        if not bDirAlready:
-            print("Error with : make dir ", strat_dir)
-            exit(1)
-
-    if not bDirAlready:
-        cl_c_filename = strat_dir + '/model_constitution.json'
-        cl_c = StratConstitution(cl_c_filename)
-        cl_c.eras_ft_t_corr_file = ERAS_FT_T_CORR_FP
-        cl_c.save()
-
-
 def simple_era_clustering(strat_dir):
     print(" -> simple era clustering")
 
-    make_cl_dir(strat_dir)
-
-    model_c = StratConstitution(strat_dir + '/' + STRAT_CONSTITUTION_FILENAME)
-    model_c.load()
+    strat_c_fp = strat_dir + '/' + STRAT_CONSTITUTION_FILENAME
+    strat_c = StratConstitution(strat_c_fp)
+    strat_c.load()
 
     era_l = load_eras()
     fts = load_features()
 
     era_cl_dict = eras_clustering(era_l, fts)
 
-    model_c.clusters = era_cl_dict
-    model_c.save()
+    strat_c.clusters = era_cl_dict
+    strat_c.save()

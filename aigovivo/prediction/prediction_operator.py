@@ -95,10 +95,10 @@ class PredictionOperator():
 
         return cl_all_models_proba
 
-    def __init__(self, dirname, model_const, model_types, bMultiProc=False):
+    def __init__(self, dirname, strat_c, model_types, bMultiProc=False):
         self.dirname = dirname
-        self.model_const = model_const
-        self.clusters = self.model_const['clusters']
+        self.strat_c = strat_c
+        self.clusters = self.strat_c.clusters
 
         self.model_types = model_types
         self.model_prefixes = model_types
@@ -120,7 +120,7 @@ class PredictionOperator():
 
     def make_snd_layer_predict(self, data_df, bSnd=True):
 
-        snd_layer_desc = self.model_const['snd_layer']
+        snd_layer_desc = self.strat_c.snd_layer
         gen_model = snd_layer_desc['models']['gen_models'] if bSnd else {}
 
         full_proba = pd.DataFrame()

@@ -11,20 +11,24 @@ from sklearn.model_selection import train_test_split
 from ..common import *
 from ..threadpool import pool_map
 from ..reader import ReaderCSV
+from ..strat import StratConstitution
+
 from .model_abstract import Model, ModelType
 from .model_generator import ModelGenerator
-
-# Random Forest
-# FST ESTIMATION FOR PARAMTERS BOUNDS :
-# n_est : < 268;340
-# m_depth :  < 28;32
-# min_splt : >= 10
-# min_leaf : >= 4
+from .model_params import model_params
 
 
-def load_data(data_filename, cols=None):
-    file_reader = ReaderCSV(data_filename)
+def load_data(data_fp, cols=None):
+    file_reader = ReaderCSV(data_fp)
     data_df = file_reader.read_csv(columns=cols).set_index("id")
+
+    return data_df
+
+
+def load_data_by_eras(data_fp, eras, cols=None):
+    file_reader = ReaderCSV(data_fp)
+    data_df = file_reader.read_csv_matching('era', eras,
+                                            columns=cols).set_index("id")
 
     return data_df
 
@@ -47,120 +51,6 @@ def load_json(filepath):
         return json_data
 
 
-def make_fst_layer_model_params(eModel, model_prefix=None):
-    if eModel == ModelType.RandomForest:
-        n_est = [220]  # np.linspace(start=180, stop=250, num=20)
-        max_d = [10]  # np.linspace(10, 20, num=5)
-        model_params_array = map(
-            lambda x: {
-                'n_estimators': int(x[0]),
-                'max_depth': int(x[1])
-            }, itertools.product(*[n_est, max_d]))
-
-        return model_params_array
-
-    if eModel == ModelType.XGBoost:
-        n_est = [220]  # np.linspace(start=180, stop=250, num=10)
-        max_d = [10]  # np.linspace(10, 20, num=5)
-        # eta = learning_rate
-        eta = [1.0]  # np.logspace(start=(-1.0), stop=0.0, base=10.0, num=5)
-
-        model_params_array = map(
-            lambda x: {
-                'n_estimators': int(x[0]),
-                'max_depth': int(x[1]),
-                'learning_rate': float(x[2])
-            }, itertools.product(*[n_est, max_d, eta]))
-
-        return model_params_array
-
-    if eModel == ModelType.NeuralNetwork:
-        num_layers = [1]  # np.linspace(start=1, stop=4, num=1)
-        layer_size_factor = [0.66]
-        train_batch_size = [50]
-        num_epoch = [30]
-        model_params_array = map(
-            lambda x: {
-                'num_layers': int(x[0]),
-                'size_factor': float(x[1]),
-                'train_batch_size': int(x[2]),
-                'num_epoch': int(x[3])
-            },
-            itertools.product(
-                *[num_layers, layer_size_factor, train_batch_size, num_epoch]))
-
-        return model_params_array
-
-    if eModel == ModelType.K_NN:
-        leaf_size = [20]  # np.linspace(start=20, stop=50, num=1)
-        minkowski_dist = [1]  # [1, 2, 3, 4]
-        model_params_array = map(
-            lambda x: {
-                'n_neighbors': int(model_prefix),
-                'leaf_size': int(x[0]),
-                'minkowski_dist': int(x[1])
-            }, itertools.product(*[leaf_size, minkowski_dist]))
-
-        return model_params_array
-
-
-def make_snd_layer_model_params(eModel, model_prefix=None):
-    if eModel == ModelType.RandomForest:
-        n_est = [150]  # np.linspace(start=180, stop=250, num=7)
-        max_d = [10]  # np.linspace(10, 20, num=5)
-        model_params_array = map(
-            lambda x: {
-                'n_estimators': int(x[0]),
-                'max_depth': int(x[1])
-            }, itertools.product(*[n_est, max_d]))
-
-        return model_params_array
-
-    if eModel == ModelType.XGBoost:
-        n_est = [150]  # np.linspace(start=180, stop=250, num=7)
-        max_d = [5]  # np.linspace(5, 20, num=5)
-        # eta = learning_rate
-        eta = [1.0]  # np.logspace(start=(-1.0), stop=0.0, base=10.0, num=5)
-
-        model_params_array = map(
-            lambda x: {
-                'n_estimators': int(x[0]),
-                'max_depth': int(x[1]),
-                'learning_rate': float(x[2])
-            }, itertools.product(*[n_est, max_d, eta]))
-
-        return model_params_array
-
-    if eModel == ModelType.NeuralNetwork:
-        num_layers = [1]  # np.linspace(start=1, stop=4, num=1)
-        layer_size_factor = [0.66]  # [0.33, 0.5, 0.66]
-        train_batch_size = [500]
-        num_epoch = [25]
-        model_params_array = map(
-            lambda x: {
-                'num_layers': int(x[0]),
-                'size_factor': float(x[1]),
-                'train_batch_size': int(x[2]),
-                'num_epoch': int(x[3])
-            },
-            itertools.product(
-                *[num_layers, layer_size_factor, train_batch_size, num_epoch]))
-
-        return model_params_array
-
-    if eModel == ModelType.K_NN:
-        leaf_size = [20]  # np.linspace(start=20, stop=50, num=1)
-        minkowski_dist = [1]  # [1, 2, 3, 4]
-        model_params_array = map(
-            lambda x: {
-                'n_neighbors': int(model_prefix),
-                'leaf_size': int(x[0]),
-                'minkowski_dist': int(x[1])
-            }, itertools.product(*[leaf_size, minkowski_dist]))
-
-        return model_params_array
-
-
 def make_model_prefix(eModel):
     if eModel is not ModelType.K_NN:
         return [None]
@@ -170,6 +60,7 @@ def make_model_prefix(eModel):
 
 def gen_aggr_dict(cl_dict):
     cl_m_w_sorted = []
+
     for cl, cl_desc in cl_dict.items():
         cl_desc_m = cl_desc['models']
         for model_name, model_desc in cl_desc_m.items():
@@ -196,15 +87,14 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
     cl_dirpath = dirname + '/' + cl
     train_filepath = cl_dirpath + '/' + 'training_data.csv'
     # test_filepath = cl_dirpath + '/' + 'test_data.csv'
-
-    train_data = load_data(train_filepath)
-    #test_data = load_data(test_filepath)
+    cl_eras = cl_dict['eras_name']
 
     cl_fts = cl_dict['selected_features']
+    cl_cols = ['id', 'era'] + cl_fts + ['target']
+    train_data = load_data_by_eras(train_filepath, cl_eras, cols=cl_cols)
 
-    valid_col = ['id', 'era'] + cl_fts + ['target']
     cl_valid_data = load_valid_cl_data(TOURNAMENT_DATA_FP, [VALID_TYPE],
-                                       valid_col)
+                                       cl_cols)
 
     # bMultiProc = False
     # if bMultiProc:
@@ -233,15 +123,14 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
             model_generator.start_model_type(model_type, model_prefix,
                                              bMetrics)
 
-            model_params_array = make_fst_layer_model_params(
-                model_type, model_prefix)
+            model_params_array = model_params('fst', model_type, model_prefix)
 
             best_ll = sys.float_info.max
-            for model_params in model_params_array:
+            for m_params in model_params_array:
 
                 model_dict = dict()
 
-                model_generator.generate_model(model_params, model_debug)
+                model_generator.generate_model(m_params, model_debug)
                 model = model_generator.build_model(train_input, train_target)
                 # print(" === evaluation - test data ===")
                 # test_eval = model_generator.evaluate_model(test_data)
@@ -265,25 +154,28 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
 
 def generate_cl_model(dirname, cl, bDebug, bMetrics, bSaveModel):
 
-    model_filepath = dirname + '/' + STRAT_CONSTITUTION_FILENAME
-    model_dict = load_json(model_filepath)
-    cl_dict = model_dict['clusters'][cl]
+    strat_c_fp = dirname + '/' + STRAT_CONSTITUTION_FILENAME
+    strat_c = StratConstitution(strat_c_fp)
+    strat_c.load()
+
+    cl_dict = strat_c.clusters[cl]
 
     cl_model_build(dirname, cl, cl_dict, bMetrics, bDebug)
 
     if bSaveModel:
-        print("model_c_filepath: ", model_filepath)
-
-        with open(model_filepath, 'w') as fp:
-            json.dump(model_dict, fp, indent=4)
+        print("strat_c_fp: ", strat_c_fp)
+        strat_c.save()
 
 
 def generate_fst_layer_model(dirname, bDebug, bMetrics, bSaveModel, bMultiProc,
                              bSaveModelDict):
-    model_c_filepath = dirname + '/' + STRAT_CONSTITUTION_FILENAME
+    strat_c_fp = dirname + '/' + STRAT_CONSTITUTION_FILENAME
     model_a_filepath = dirname + '/' + MODEL_AGGREGATION_FILENAME
-    model_dict = load_json(model_c_filepath)
-    cl_dict = model_dict['clusters']
+
+    strat_c = StratConstitution(strat_c_fp)
+    strat_c.load()
+
+    cl_dict = strat_c.clusters
 
     start_time = time.time()
 
@@ -300,22 +192,19 @@ def generate_fst_layer_model(dirname, bDebug, bMetrics, bSaveModel, bMultiProc,
 
         model_dict_l = dict(cl_dir_model_l)
     else:
-        for cl, cl_dict in cl_dict.items():
-            cl_model_build(dirname, cl, cl_dict, bMetrics, bDebug)
+        for cl, cl_c in cl_dict.items():
+            cl_model_build(dirname, cl, cl_c, bMetrics, bDebug)
             continue
 
     print("model building done")
     print("--- %s seconds ---" % (time.time() - start_time))
 
-    aggr_dict = gen_aggr_dict(model_dict['clusters'])
-
     if bSaveModel or bSaveModelDict:
-        print("model_c_filepath: ", model_c_filepath)
-        print("model_dict: ", model_dict)
-        print("model_dict_l.keys(): ", model_dict_l.keys())
+        print("strat_c_fp: ", strat_c_fp)
 
-        with open(model_c_filepath, 'w') as fp:
-            json.dump(model_dict, fp, indent=4)
+        strat_c.save()
+
+        aggr_dict = gen_aggr_dict(cl_dict)
 
         with open(model_a_filepath, 'w') as fp:
             json.dump(aggr_dict, fp, indent=4)
@@ -374,14 +263,14 @@ def snd_layer_model_build(aggr_dict,
                 model_generator.start_model_type(model_type, model_prefix,
                                                  bMetrics)
 
-                model_params_array = make_snd_layer_model_params(
-                    model_type, model_prefix)
+                model_params_array = model_params('snd', model_type,
+                                                  model_prefix)
 
                 best_ll = sys.float_info.max
-                for model_params in model_params_array:
+                for m_params in model_params_array:
 
                     print("generate model")
-                    model_generator.generate_model(model_params, model_debug)
+                    model_generator.generate_model(m_params, model_debug)
                     model = model_generator.build_model(
                         train_input, train_target)
                     model_dict = model_generator.evaluate_model(
@@ -406,16 +295,16 @@ def generate_snd_layer_model(dirname, bDebug, bMetrics, bSaveModel):
     snd_layer_dirname = dirname + '/' + SND_LAYER_DIRNAME
 
     snd_layer_train_data_fp = dirname + '/' + SND_LAYER_DIRNAME + '/' + PRED_TRAIN_FILENAME
-    #snd_layer_train_data = load_data(snd_layer_train_data_fp)
 
     snd_layer_valid_data_fp = dirname + '/' + SND_LAYER_DIRNAME + '/' + PREDICTIONS_FILENAME + VALID_TYPE + PRED_FST_SUFFIX
-    #snd_layer_valid_data = load_data(snd_layer_valid_data_fp)
 
     #print("snd_layer_training_data.columns: ", snd_layer_train_data.columns)
     #print("snd_layer_valid_data.columns: ", snd_layer_valid_data.columns)
 
-    model_c_filepath = dirname + '/' + STRAT_CONSTITUTION_FILENAME
-    cl_dict = load_json(model_c_filepath)
+    strat_c_fp = dirname + '/' + STRAT_CONSTITUTION_FILENAME
+    strat_c = StratConstitution(strat_c_fp)
+    strat_c.load()
+
     agg_filepath = dirname + '/' + MODEL_AGGREGATION_FILENAME
     aggr_dict = load_json(agg_filepath)
 
@@ -428,19 +317,19 @@ def generate_snd_layer_model(dirname, bDebug, bMetrics, bSaveModel):
                                        model_debug=bDebug)
 
     if bSaveModel:
-        cl_dict[SND_LAYER]['models'] = model_aggr
-        print("cl_dict: ", cl_dict[SND_LAYER])
+        strat_c.snd_layer['models'] = model_aggr
+        print("strat_c.snd_layer: ", strat_c.snd_layer)
 
-        with open(model_c_filepath, 'w') as fp:
-            json.dump(cl_dict, fp, indent=4)
+        strat_c.save()
 
 
-def generate_models(strat_dir, layer, bDebug, bMetrics, bSaveModel, bMultiProc):
+def generate_models(strat_dir, layer, bDebug, bMetrics, bSaveModel,
+                    bMultiProc):
 
     bSaveModelDict = bSaveModel
 
     if layer == 'fst':
         generate_fst_layer_model(strat_dir, bDebug, bMetrics, bSaveModel,
-            bMultiProc, bSaveModelDict)
+                                 bMultiProc, bSaveModelDict)
     elif layer == 'snd':
         generate_snd_layer_model(strat_dir, bDebug, bMetrics, bSaveModel)

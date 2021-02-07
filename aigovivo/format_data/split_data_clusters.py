@@ -43,16 +43,17 @@ def generate_data_cluster(dirname, cl_data_df, cl_name, cl_fts):
 
     #cl_ft_data_df.to_csv(cl_dirpath + CL_NUMERAI_TR_DATA_FP)
     eras_corr_matrix.to_csv(cl_dirpath + CL_ERAS_CORR_FP)
+    # remove this file
     cl_ft_data_df.to_csv(cl_dirpath + CL_TR_DATA_FP)
     # test_df.to_csv(cl_dirpath + CL_TEST_DATA_FP)
 
 
 def split_data_clusters(dirname):
 
-    model_c = StratConstitution(dirname + '/' + STRAT_CONSTITUTION_FILENAME)
-    model_c.load()
+    strat_c = StratConstitution(dirname + '/' + STRAT_CONSTITUTION_FILENAME)
+    strat_c.load()
 
-    for cl_name, cl_c in model_c.clusters.items():
+    for cl_name, cl_c in strat_c.clusters.items():
         cl_eras = cl_c['eras_name']
         cluster_data = load_h5_eras(TRAINING_STORE_H5_FP,
                                     cl_eras).set_index('id')

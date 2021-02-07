@@ -3,7 +3,7 @@ import click
 from .h5 import store_h5
 from .data_analysis import compute_corr, ft_selection
 from .strat import make_new_strat
-from .clustering import clustering, clustering_2, simple_era_clustering
+from .clustering import clustering, simple_era_clustering
 from .format_data import split_data_clusters
 from .prediction import make_prediction, cluster_proba, upload_results
 from .models import generate_cl_model, generate_models
@@ -26,9 +26,16 @@ def corr():
 
 
 @cli.command('new')
+@click.option(
+    "-m",
+    "--method",
+    type=click.Choice(CLUSTER_METHODS, case_sensitive=False),
+    default="cluster",
+    prompt=True,
+)
 @click.argument('folder', type=click.Path(), required=True)
-def new(folder):
-    make_new_strat(folder)
+def new(method, folder):
+    make_new_strat(method, folder)
     return
 
 
@@ -39,21 +46,11 @@ def ft(folder):
 
 
 @cli.command('cl')
-@click.option(
-    "-m",
-    "--method",
-    type=click.Choice(CLUSTER_METHODS, case_sensitive=False),
-    default="cluster",
-    prompt=True,
-)
 @click.argument('folder', type=click.Path(exists=True))
-def cl(method, folder):
-    if method == STRAT_CLUSTER:
-        clustering(folder)
-    elif method == STRAT_CLUSTER_2:
-        clustering_2(folder)
-    elif method == STRAT_ERA_SIMPLE:
-        simple_era_clustering(folder)
+def cl(folder):
+    clustering(folder)
+    # elif method == STRAT_ERA_SIMPLE:
+    #     simple_era_clustering(folder)
     split_data_clusters(folder)
 
 
@@ -117,7 +114,7 @@ def exec(threadpool, pred, layer, cluster, folder):
         if layer == '0':
             if cluster is None:
                 print("cluster name not provided")
-            return
+                return
             cluster_proba(folder, cluster)
         else:
             if cluster is not None:
