@@ -6,7 +6,7 @@ from .strat import make_new_strat
 from .clustering import clustering, simple_era_clustering
 from .format_data import split_data_clusters
 from .prediction import make_prediction, cluster_proba, upload_results
-from .models import generate_cl_model, generate_models
+from .models import generate_cl_interpo, generate_cl_model, generate_models
 from .common import *
 
 
@@ -54,6 +54,25 @@ def cl(folder):
     split_data_clusters(folder)
 
 
+# TODO : move interpo to train ?
+# @cli.command('interpo')
+# @click.option("-d", "--debug", default=False, show_default=True, is_flag=True)
+# @click.option("-m",
+#               "--metrics",
+#               default=False,
+#               show_default=True,
+#               is_flag=True)
+# @click.option("-ns",
+#               "--no-save",
+#               default=True,
+#               show_default=True,
+#               is_flag=True)
+# @click.option("-c", "--cluster", default=None, show_default=True)
+# @click.argument('folder', type=click.Path(exists=True))
+# def interpo(metrics, debug, no_save, cluster, folder):
+#     generate_cl_interpo(folder, metrics, debug, no_save, cluster)
+
+
 @cli.command('train')
 @click.option("-d", "--debug", default=False, show_default=True, is_flag=True)
 @click.option("-m",
@@ -79,15 +98,16 @@ def cl(folder):
 @click.option("-c", "--cluster", default=None, show_default=True)
 @click.argument('folder', type=click.Path(exists=True))
 def train(debug, metrics, no_save, threadpool, layer, cluster, folder):
+    save = not no_save
     if layer == '0':
         if cluster is None:
             print("cluster name not provided")
             return
-        generate_cl_model(folder, cluster, debug, metrics, no_save)
+        generate_cl_model(folder, cluster, debug, metrics, save)
     else:
         if cluster is not None:
             print("specifying a cluster is unecessary when training a layer")
-        generate_models(folder, layer, debug, metrics, no_save, threadpool)
+        generate_models(folder, layer, debug, metrics, save, threadpool)
     return
 
 

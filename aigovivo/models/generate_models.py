@@ -85,13 +85,15 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
     print("build model cluster: ", cl)
 
     cl_dirpath = dirname + '/' + cl
-    train_filepath = cl_dirpath + '/' + 'training_data.csv'
-    # test_filepath = cl_dirpath + '/' + 'test_data.csv'
     cl_eras = cl_dict['eras_name']
 
     cl_fts = cl_dict['selected_features']
     cl_cols = ['id', 'era'] + cl_fts + ['target']
-    train_data = load_data_by_eras(train_filepath, cl_eras, cols=cl_cols)
+    train_data = load_data_by_eras(TRAINING_DATA_FP, cl_eras, cols=cl_cols)
+
+    # Need to reorder ft col by selected_features in model description
+    cl_order_col = ['era'] + cl_fts + ['target']
+    train_data = train_data[cl_order_col]
 
     cl_valid_data = load_valid_cl_data(TOURNAMENT_DATA_FP, [VALID_TYPE],
                                        cl_cols)
@@ -107,6 +109,7 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
 
     # model_types = ModelType
     # model_types = [ModelType.NeuralNetwork]
+    # model_types = [ModelType.RandomForest]
     # model_types = [ModelType.XGBoost, ModelType.RandomForest,
     #                ModelType.NeuralNetwork]  # , ModelType.K_NN]
     model_types = [

@@ -6,6 +6,7 @@ ERA_CL_SUBDIR_PREFIX = 'cluster_'
 ERA_GRAPH_SUBDIR_PREFIX = 'graph_'
 DATA_DIRNAME = 'data'
 SND_LAYER_DIRNAME = 'snd_layer'
+INTERPO_DIRNAME = 'interpo'
 
 STRAT_CLUSTER = 'cluster'
 STRAT_CLUSTER_2 = 'cluster_2'

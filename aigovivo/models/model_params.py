@@ -10,6 +10,17 @@ from .model_abstract import Model, ModelType
 # min_leaf : >= 4
 
 
+def interpo_params():
+    degree = [2]
+    # L2 norm ? Manhattan ? max ?
+
+    model_params_array = map(lambda x: {
+        'degree': int(degree[0]),
+    }, itertools.product(*[degree]))
+
+    return model_params_array
+
+
 def model_params(layer, eModel, model_prefix=None):
 
     if layer == 'fst':

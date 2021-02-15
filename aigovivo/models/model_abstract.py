@@ -10,6 +10,7 @@ from ..common import *
 
 
 class ModelType(enum.Enum):
+    UnivPolyInterpo = 0
     RandomForest = 1
     XGBoost = 2
     K_NN = 3
@@ -20,6 +21,10 @@ class Model(ABC):
     def _get_model_name(self, model_type, model_params):
         if model_type == ModelType.K_NN:
             filename = str(model_params['n_neighbors']) + '_nn'
+            return filename
+
+        if model_type == ModelType.UnivPolyInterpo:
+            filename = str(model_params['degree']) + '_interpo'
             return filename
 
         return model_type.name
