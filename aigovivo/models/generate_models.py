@@ -61,6 +61,8 @@ def make_model_prefix(eModel):
 def gen_aggr_dict(cl_dict):
     cl_m_w_sorted = []
 
+    # TODO: make aggregation as a mix of best model for each clusters
+
     for cl, cl_desc in cl_dict.items():
         cl_desc_m = cl_desc['models']
         for model_name, model_desc in cl_desc_m.items():
@@ -95,6 +97,8 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
     cl_order_col = ['era'] + cl_fts + ['target']
     train_data = train_data[cl_order_col]
 
+    #
+
     cl_valid_data = load_valid_cl_data(TOURNAMENT_DATA_FP, [VALID_TYPE],
                                        cl_cols)
 
@@ -119,7 +123,6 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
     model_generator = ModelGenerator(cl_dirpath)
     train_input, train_target = model_generator.format_train_data(train_data)
 
-    model_l = dict()
     for model_type in model_types:
         for model_prefix in make_model_prefix(model_type):
 
@@ -150,9 +153,7 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
                     model_dict['valid_eval'] = valid_eval
                     model_dict['model_filepath'] = filepath
                     model_dict['config_filepath'] = configpath
-                    model_l[model_type.name] = model_dict
-
-    cl_dict['models'] = model_l
+                    cl_dict['models'][model_type.name] = model_dict
 
 
 def generate_cl_model(dirname, cl, bDebug, bMetrics, bSaveModel):

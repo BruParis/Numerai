@@ -12,6 +12,7 @@ from ..common import *
 from ..data_analysis import rank_proba
 
 BATCH_SIZE_PREDICT = 1000
+MEAN = 0.5
 
 
 class NeuralNetwork(Model):
@@ -38,10 +39,19 @@ class NeuralNetwork(Model):
         ]
 
         # use gelu instead of relu?
+
+        # dense_layers_tuple = [[
+        #     keras.layers.Dense(size, activation='relu'),
+        #     keras.layers.Dropout(.2)
+        # ] for size in layers_size]
         dense_layers_tuple = [[
-            keras.layers.Dense(size, activation='relu'),
+            keras.layers.Dense(size, activation='sigmoid'),
             keras.layers.Dropout(.2)
         ] for size in layers_size]
+        # dense_layers_tuple = [[
+        #     keras.layers.Dense(size, activation='softmax'),
+        #     keras.layers.Dropout(.2)
+        # ] for size in layers_size]
         dense_layers = [
             layer for layer_tuple in dense_layers_tuple
             for layer in layer_tuple
@@ -82,6 +92,8 @@ class NeuralNetwork(Model):
         if self.debug:
             print("model params: ", self.model_params)
 
+        train_input = train_input - MEAN
+
         print("Neural Net KERAS - build model")
         print("train_target: ", train_target)
         train_t_labels = self._generate_target_labels(train_target)
@@ -118,6 +130,8 @@ class NeuralNetwork(Model):
         return prediction
 
     def predict_proba(self, data_input):
+        data_input = data_input - MEAN
+
         prediction_proba = self.model.predict(data_input)
 
         return prediction_proba

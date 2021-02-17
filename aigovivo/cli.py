@@ -82,7 +82,7 @@ def cl(folder):
               is_flag=True)
 @click.option("-ns",
               "--no-save",
-              default=True,
+              default=False,
               show_default=True,
               is_flag=True)
 @click.option("-t",
