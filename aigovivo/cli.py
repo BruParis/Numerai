@@ -1,10 +1,9 @@
 import click
 
-from .h5 import store_h5
 from .data_analysis import compute_corr, ft_selection
 from .strat import make_new_strat
 from .clustering import clustering, simple_era_clustering
-from .format_data import split_data_clusters
+from .format_data import data_setup, split_data_clusters
 from .prediction import make_prediction, cluster_proba, upload_results
 from .models import generate_cl_interpo, generate_cl_model, generate_models
 from .common import *
@@ -15,9 +14,9 @@ def cli():
     return
 
 
-@cli.command('h5')
-def h5():
-    store_h5()
+@cli.command('setup')
+def setup():
+    data_setup()
 
 
 @cli.command('corr')

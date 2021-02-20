@@ -36,7 +36,6 @@ class ReaderCSV():
 
     def read_csv_filter_id(self, list_id, columns=None):
         dtypes = self._get_dtypes()
-        print("loading: ", self.filepath)
 
         # Do not use skiprows with filter_id -> usually list_id can pretty long
         #    (each row reading will look into list_id)
@@ -55,6 +54,8 @@ class ReaderCSV():
         return data_df
 
     def read_csv_matching(self, filter_col, filter_values, columns=None):
+
+        print("loading : {} matching w/ {}".format(self.filepath, filter_col))
 
         full_data_id = pd.read_csv(self.filepath, usecols=['id'])
         data_col = pd.read_csv(self.filepath, usecols=['id', filter_col])

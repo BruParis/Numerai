@@ -91,6 +91,8 @@ TEST_TYPE = 'test'
 LIVE_TYPE = 'live'
 PREDICTION_TYPES = [VALID_TYPE, TEST_TYPE, LIVE_TYPE]
 
+ERAS_DT_JSON_FILE = 'eras_data_types.json'
+
 H5_ERAS = 'eras'
 H5_FT = 'features'
 
