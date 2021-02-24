@@ -59,8 +59,6 @@ def cl_model_build(strat_dir,
 
             interpo_d = dict()
 
-            # print(" === evaluation - test data ===")
-            # test_eval = model_generator.evaluate_model(test_data)
             print(" === tourn. validation - test data ===")
             valid_eval = model_generator.evaluate_model(
                 valid_ft_data, cl_dirpath)

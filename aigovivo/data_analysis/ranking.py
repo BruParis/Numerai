@@ -28,13 +28,19 @@ def proba_to_target_label(proba, models):
     return res
 
 
+def rank_pred(pred_df):
+    rank_s = pred_df.rank(pct=True, method="first")
+
+    return rank_s
+
+
 def rank_proba(proba, model_name):
     score_df = pd.concat([
         proba.loc[:, proba.columns.str.endswith(str(t_val))] * t_val
         for t_val in TARGET_VALUES
     ],
                          axis=1).sum(axis=1)
-    rank_s = score_df.rank() / len(score_df)
+    rank_s = rank_pred(score_df)
     rank_df = pd.DataFrame(rank_s, columns=[model_name])
 
     if 'era' in proba.columns:
@@ -60,9 +66,3 @@ def rank_proba_models(proba, models):
         res = pd.concat([res, proba.loc[:, 'era']], axis=1)
 
     return res
-
-
-def rank_pred(pred_df):
-    rank_s = pred_df.rank() / len(pred_df)
-
-    return rank_s

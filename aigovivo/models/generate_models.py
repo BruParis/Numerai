@@ -35,13 +35,16 @@ def load_data_by_eras(data_fp, eras, cols=None):
 
 def load_valid_cl_data(data_fp, data_types, cols):
     f_r = ReaderCSV(data_fp)
-    input_data = f_r.read_csv_matching('data_type', data_types, columns=cols)
+    valid_data = f_r.read_csv_matching('data_type', data_types,
+                                       columns=cols).set_index('id')
 
-    # TODO : move reindex to model_handler
-    cols.remove('id')
-    input_data = input_data.reindex(columns=cols)
+    # TODO : move reindex to model_handler (model_generator)
+    if 'id' in cols:
+        cols.remove('id')
 
-    return input_data
+    valid_data = valid_data.reindex(columns=cols)
+
+    return valid_data
 
 
 def load_json(filepath):
@@ -97,28 +100,17 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
     cl_order_col = ['era'] + cl_fts + ['target']
     train_data = train_data[cl_order_col]
 
-    #
-
     cl_valid_data = load_valid_cl_data(TOURNAMENT_DATA_FP, [VALID_TYPE],
                                        cl_cols)
 
-    # bMultiProc = False
-    # if bMultiProc:
-    # Parallelism only shows a slight speed improvment
-    # -> not enough memory for mutliple thread w/ full dataset (?)
-    # model_metrics_arg = list(zip(itertools.repeat(cl), itertools.repeat(
-    #     metrics_filename), itertools.repeat(train_data), itertools.repeat(test_data), model_params_array))
-    # pool_map(model_itf.generate_model, model_metrics_arg)
-    # else:
-
     # model_types = ModelType
-    # model_types = [ModelType.NeuralNetwork]
+    model_types = [ModelType.NeuralNetwork]
     # model_types = [ModelType.RandomForest]
     # model_types = [ModelType.XGBoost, ModelType.RandomForest,
     #                ModelType.NeuralNetwork]  # , ModelType.K_NN]
-    model_types = [
-        ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
-    ]
+    # model_types = [
+    #     ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
+    # ]
 
     model_generator = ModelGenerator(cl_dirpath)
     train_input, train_target = model_generator.format_train_data(train_data)
@@ -138,8 +130,6 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
 
                 model_generator.generate_model(m_params, model_debug)
                 model = model_generator.build_model(train_input, train_target)
-                # print(" === evaluation - test data ===")
-                # test_eval = model_generator.evaluate_model(test_data)
                 print(" === tourn. validation - test data ===")
                 valid_eval = model_generator.evaluate_model(
                     cl_valid_data, cl_dirpath)
@@ -225,7 +215,7 @@ def load_data_filter_id(data_filename, list_id, columns=None):
 
 
 def snd_layer_model_build(aggr_dict,
-                          snd_layer_dirname,
+                          snd_layer_dirpath,
                           train_data_fp,
                           valid_data_fp,
                           bSaveModel=False,
@@ -252,7 +242,7 @@ def snd_layer_model_build(aggr_dict,
         ]  # , ModelType.K_NN]
         #model_types = [ModelType.NeuralNetwork]
 
-        model_generator = ModelGenerator(snd_layer_dirname)
+        model_generator = ModelGenerator(snd_layer_dirpath)
         train_input, train_target = model_generator.format_train_data(
             train_data)
 
@@ -278,7 +268,7 @@ def snd_layer_model_build(aggr_dict,
                     model = model_generator.build_model(
                         train_input, train_target)
                     model_dict = model_generator.evaluate_model(
-                        f_valid_target_data)
+                        f_valid_target_data, snd_layer_dirpath)
                     print("model: ", model)
                     print("model_dict: ", model_dict)
 
@@ -296,7 +286,7 @@ def snd_layer_model_build(aggr_dict,
 
 
 def generate_snd_layer_model(dirname, bDebug, bMetrics, bSaveModel):
-    snd_layer_dirname = dirname + '/' + SND_LAYER_DIRNAME
+    snd_layer_dirpath = dirname + '/' + SND_LAYER_DIRNAME
 
     snd_layer_train_data_fp = dirname + '/' + SND_LAYER_DIRNAME + '/' + PRED_TRAIN_FILENAME
 
@@ -313,7 +303,7 @@ def generate_snd_layer_model(dirname, bDebug, bMetrics, bSaveModel):
     aggr_dict = load_json(agg_filepath)
 
     model_aggr = snd_layer_model_build(aggr_dict,
-                                       snd_layer_dirname,
+                                       snd_layer_dirpath,
                                        snd_layer_train_data_fp,
                                        snd_layer_valid_data_fp,
                                        bSaveModel=bSaveModel,

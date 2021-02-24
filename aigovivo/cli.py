@@ -1,10 +1,10 @@
 import click
 
-from .data_analysis import compute_corr, ft_selection
+from .data_analysis import compute_corr, ft_selection, pred_diagnostics, cl_pred_diagnostics
 from .strat import make_new_strat
 from .clustering import clustering, simple_era_clustering
 from .format_data import data_setup, split_data_clusters
-from .prediction import make_prediction, cluster_proba, upload_results
+from .prediction import make_prediction, cluster_proba, neutralize_pred, upload_results
 from .models import generate_cl_interpo, generate_cl_model, generate_models
 from .common import *
 
@@ -144,6 +144,31 @@ def exec(threadpool, pred, layer, cluster, folder):
             cluster_proba(folder)
     elif pred == 'prediction':
         make_prediction(folder, layer)
+    elif pred == 'neutralize':
+        neutralize_pred(folder)
+
+
+@cli.command('diag')
+@click.option("-l",
+              "--layer",
+              type=click.Choice(LAYERS, case_sensitive=False),
+              default="fst",
+              prompt=True)
+@click.option("-c", "--cluster", default=None, show_default=True)
+@click.argument('folder', type=click.Path(exists=True))
+def diag(layer, cluster, folder):
+    if layer == '0':
+        if cluster is None:
+            print("cluster name not provided")
+            return
+        cl_pred_diagnostics(folder, cluster)
+    else:
+        if cluster is not None:
+            print("specifying a cluster is unecessary for layer diagnostic")
+        if layer == 'snd':
+            print("snd layer doesn't produce proba")
+            return
+        pred_diagnostics(folder)
 
 
 @cli.command('upload')

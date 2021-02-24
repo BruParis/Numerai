@@ -4,6 +4,7 @@ import json
 import os
 import errno
 import matplotlib.pyplot as plt
+from scipy import stats
 
 from ..reader import ReaderCSV, load_h5_eras
 from ..common import *
@@ -31,6 +32,13 @@ def ft_target_corr(data_df, features):
     })
 
     return ft_t_corr
+
+
+def compute_corr(data_1, data_2):
+    # corr = np.corrcoef(data_1, data_2)[0, 1]
+    corr, _ = stats.spearmanr(data_1, data_2)
+
+    return corr
 
 
 def get_eras_corr(data_fp, eras, features):

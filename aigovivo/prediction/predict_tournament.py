@@ -23,10 +23,16 @@ def load_json(filepath):
         return json_data
 
 
-def load_eras_data_type():
+def load_eras_data_type(data_type=None):
     file_reader = ReaderCSV(TOURNAMENT_DATA_FP)
-    eras_df = file_reader.read_csv(
-        columns=['id', 'era', 'data_type']).set_index('id')
+
+    if data_type is None:
+        eras_df = file_reader.read_csv(
+            columns=['id', 'era', 'data_type']).set_index('id')
+    else:
+        eras_df = file_reader.read_csv_matching(
+            'data_type', [data_type], columns=['id', 'era',
+                                               'data_type']).set_index('id')
 
     return eras_df
 
@@ -51,13 +57,6 @@ def load_validation_target():
     input_data = file_reader.read_csv_matching('data_type', [VALID_TYPE],
                                                columns=['id', 'era', 'target'
                                                         ]).set_index('id')
-
-    return input_data
-
-
-def load_data_by_eras(data_filepath, eras):
-    file_reader = ReaderCSV(data_filepath)
-    input_data = file_reader.read_csv_matching('era', eras).set_index('id')
 
     return input_data
 
@@ -180,7 +179,7 @@ def make_prediction_fst(strat_dir, strat_c, aggr_dict, data_types_files):
 
         rank_aggr_pred_dict = aggr_rank(rank_dict, aggr_dict, data_t)
 
-        all_preds = pd.DataFrame()
+        all_preds = load_eras_data_type(data_t)
         for _, rank_df in rank_aggr_pred_dict.items():
             all_preds = pd.concat([all_preds, rank_df], axis=1)
 
@@ -210,13 +209,15 @@ def make_compute_pred(strat_dir, aggr_desc, data_types_files):
             for cl, cl_models in load_cl_m_dict.items()
         }
 
-        for cl, model_n, weight in aggr_desc['cluster_models']:
+        for cl, model_n, _ in aggr_desc['cluster_models']:
             cl_fp = strat_dir + '/' + cl + '/' + cl_fn
             cl_rank = load_data(cl_fp, cols=['id', model_n])
             rank_dict[cl][model_n] = cl_rank
 
         rank_aggr_pred_dict = aggr_rank(rank_dict, aggr_l, data_t)
-        aggr_pred = rank_aggr_pred_dict["16"]
+
+        pred_eras = load_eras_data_type(data_t)
+        aggr_pred = pd.concat([pred_eras, rank_aggr_pred_dict["16"]], axis=1)
 
         with open(fpath, 'w') as f:
             aggr_pred.to_csv(f, header=file_w_h[data_t], index=True)

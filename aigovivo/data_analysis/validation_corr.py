@@ -4,6 +4,8 @@ import numpy as np
 from ..common import *
 from ..reader import ReaderCSV
 
+from .feature_era_corr import compute_corr
+
 BENCHMARK = 0
 BAND = 0.2
 
@@ -24,9 +26,8 @@ def payout(scores):
 def score(data_df, pred_col_name):
     # Submissions are scored by spearman correlation
     # method="first" breaks ties based on order in array
-    return np.corrcoef(data_df[TARGET_LABEL],
-                       data_df[pred_col_name].rank(pct=True,
-                                                   method="first"))[0, 1]
+    res = compute_corr(data_df[TARGET_LABEL], data_df[pred_col_name])
+    return res
 
 
 def pred_valid_score(validation_data, pred_col_name):

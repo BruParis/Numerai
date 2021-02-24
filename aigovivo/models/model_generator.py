@@ -160,7 +160,7 @@ class ModelGenerator():
 
         return self.model
 
-    def evaluate_model(self, data_df, cl_dirpath=None):
+    def evaluate_model(self, data_df, cl_dirpath):
         print("data_df: ", data_df)
 
         data_input, data_target = self._format_input_target(data_df)
@@ -193,12 +193,12 @@ class ModelGenerator():
         eval_rank = rank_proba(test_proba_df, self.model_type.name)
         eval_rank['era'] = data_df['era']
 
-        if cl_dirpath is not None:
-            model_eval_data = pd.concat([test_proba_df, eval_rank], axis=1)
-            model_eval_fn = self.model_type.name + '_valid_data.csv'
-            model_eval_fp = cl_dirpath + '/' + model_eval_fn
-            with open(model_eval_fp, 'w') as fp:
-                model_eval_data.to_csv(fp)
+        model_eval_data = pd.concat([test_proba_df, eval_rank], axis=1)
+        model_eval_fn = self.model_type.name + '_valid_data.csv'
+        model_eval_fp = cl_dirpath + '/' + model_eval_fn
+        with open(model_eval_fp, 'w') as fp:
+            eval_score_dict['valid_data_fp'] = model_eval_fp
+            model_eval_data.to_csv(fp)
 
         eval_score_dict['valid_score'] = valid_score(eval_rank,
                                                      self.model_type.name,
