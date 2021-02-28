@@ -42,7 +42,7 @@ def era_cross_mut_i(train_data, target_data, eras_xy, sel_ft):
     return new_row
 
 
-def compute_corr():
+def generate_cross_corr():
 
     sel_ft_dict = load_json(CL_SELECTED_FT_JSON)
     sel_ft = sel_ft_dict['selected_features']

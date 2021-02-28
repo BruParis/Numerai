@@ -149,4 +149,6 @@ class NeuralNetwork(Model):
 
         full_layers = self._generate_layers_array()
         self.model = keras.Sequential(full_layers)
-        self.model.load_weights(self.filepath)
+        self.model.load_weights(self.filepath).expect_partial()
+
+        # Or save wiuth saver : tf.train.Saver(tf.model_variables())

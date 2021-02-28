@@ -4,3 +4,4 @@ from .neutralize_tournament import neutralize_pred
 from .produce_proba import *
 from .upload_results import *
 from .generate_snd_layer_training_data import *
+from .compute_predict import compute_predict

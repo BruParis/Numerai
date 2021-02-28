@@ -126,7 +126,7 @@ def aggr_rank(rank_dict, aggr_dict, data_t):
     aggr_pred_dict = dict()
     for aggr_id, aggr_desc in aggr_dict.items():
 
-        full_pred_df = pd.DataFrame(columns=COL_PROBA_NAMES)
+        full_pred_df = pd.DataFrame(columns=['Full'])
         for cl, model, weight in aggr_desc['cluster_models']:
             cl_m_rank = rank_dict[cl][model]
             cl_m_rank.columns = ['Full']
@@ -139,7 +139,7 @@ def aggr_rank(rank_dict, aggr_dict, data_t):
         full_pred_df /= total_w
 
         aggr_pred = rank_pred(full_pred_df)
-        aggr_pred_name = 'aggr_pred_' + str(aggr_id)
+        aggr_pred_name = AGGR_PREFIX + str(aggr_id)
         aggr_pred.columns = [aggr_pred_name]
         aggr_pred_dict[aggr_id] = aggr_pred
 
@@ -326,12 +326,7 @@ def make_prediction(strat_dir, layer):
         ]
         data_types_files = list(
             zip(PREDICTION_TYPES, predictions_fst_fp, proba_cl_fn))
-        if COMPUTE_BOOL:
-            compute_aggr = aggr_dict['16']
-            make_compute_pred(strat_dir, compute_aggr, data_types_files)
-        else:
-            make_prediction_fst(strat_dir, strat_c, aggr_dict,
-                                data_types_files)
+        make_prediction_fst(strat_dir, strat_c, aggr_dict, data_types_files)
 
     if layer == 'snd':
 

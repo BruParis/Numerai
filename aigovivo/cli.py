@@ -1,10 +1,10 @@
 import click
 
-from .data_analysis import compute_corr, ft_selection, pred_diagnostics, cl_pred_diagnostics
+from .data_analysis import generate_cross_corr, ft_selection, pred_diagnostics, cl_pred_diagnostics
 from .strat import make_new_strat
 from .clustering import clustering, simple_era_clustering
 from .format_data import data_setup, split_data_clusters
-from .prediction import make_prediction, cluster_proba, neutralize_pred, upload_results
+from .prediction import make_prediction, cluster_proba, neutralize_pred, upload_results, compute_predict
 from .models import generate_cl_interpo, generate_cl_model, generate_models
 from .common import *
 
@@ -21,7 +21,7 @@ def setup():
 
 @cli.command('corr')
 def corr():
-    compute_corr()
+    generate_cross_corr()
 
 
 @cli.command('new')
@@ -146,6 +146,18 @@ def exec(threadpool, pred, layer, cluster, folder):
         make_prediction(folder, layer)
     elif pred == 'neutralize':
         neutralize_pred(folder)
+
+
+@cli.command('compute')
+@click.option("-l",
+              "--layer",
+              type=click.Choice(LAYERS, case_sensitive=False),
+              default="fst",
+              prompt=True)
+@click.option("-c", "--cluster", default=None, show_default=True)
+@click.argument('folder', type=click.Path(exists=True))
+def compute(layer, cluster, folder):
+    compute_predict(layer, cluster, folder)
 
 
 @cli.command('diag')

@@ -78,7 +78,8 @@ def gen_aggr_dict(cl_dict):
     aggr_dict = dict()
     for i in range(1, len(cl_m_w_sorted)):
         aggr_cl_m_w = cl_m_w_sorted[:i]
-        aggr_dict[i] = {
+        aggr_pred_name = AGGR_PREFIX + str(i)
+        aggr_dict[aggr_pred_name] = {
             'cluster_models': [(cl, m, w) for cl, m, w in aggr_cl_m_w],
             'total_w': sum([w for *_, w in aggr_cl_m_w])
         }

@@ -18,11 +18,7 @@ class PredictionOperator():
 
     def _model_predict_proba(self, model_path, model_type, model_prefix,
                              input_data):
-        print("path: ", model_path)
-        print("model_type: ", model_type)
-        print("model_prefix: ", model_prefix)
         model_dirname = os.path.dirname(model_path)
-        print("model_path: ", model_path)
         model = load_model(model_dirname, model_type, model_prefix)
 
         prediction_proba = model.predict_proba(input_data)
@@ -39,7 +35,6 @@ class PredictionOperator():
         return prediction_proba_df
 
     def _model_proba(self, input_data, cluster, eModel, model_desc):
-
         cl_ft = cluster['selected_features']
         input_data_ft = input_data[cl_ft]
         # input_target = input_data[TARGET_LABEL]

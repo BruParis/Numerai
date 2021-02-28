@@ -49,7 +49,7 @@ def neutralize_pred(strat_dir):
             print("")
             print(" ******** aggr: {} ********".format(aggr))
 
-            aggr_pred_name = 'aggr_pred_' + aggr
+            aggr_pred_name = AGGR_PREFIX + aggr
             n_pred_name = aggr_pred_name + '_n'
             aggr_pred = data_type_pred[['era', aggr_pred_name]]
 
@@ -61,10 +61,11 @@ def neutralize_pred(strat_dir):
 
                 era_data = pd.concat([era_input_data, era_aggr_pred], axis=1)
 
-                era_data[n_pred_name] = neutralize(era_data, aggr_pred_name)
-                era_data[n_pred_name] = rank_pred(era_data[n_pred_name])
-
                 aggr_n_full = aggr_n_full.append(era_data[[n_pred_name]])
+
+            aggr_n_full[n_pred_name] = aggr_n_full.groupby('era').apply(
+                lambda x: neutralize(x, aggr_pred_name)).values
+            aggr_n_full[n_pred_name] = rank_pred(aggr_n_full[n_pred_name])
 
             data_type_pred = pd.concat([data_type_pred, aggr_n_full], axis=1)
             aggr_desc['neutralized'] = {'name': n_pred_name}

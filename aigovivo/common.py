@@ -58,6 +58,8 @@ TEST_RATIO = 0.10
 # era_ft_corr
 ERAS_FT_T_CORR_FP = DATA_DIRNAME + '/eras_ft_target_corr.csv'
 
+AGGR_PREFIX = "aggr_pred_"
+NEUTRALIZED_SUFFIX = "_n"
 STRAT_CONSTITUTION_FILENAME = 'strat_constitution.json'
 MODEL_AGGREGATION_FILENAME = 'model_aggregations.json'
 ERA_CROSS_SCORE_FP = ERA_CL_DIRNAME + '/era_cross_score.csv'
@@ -73,6 +75,7 @@ LAYER_PRED_SUFFIX = {FST_LAYER: '_fst.csv', SND_LAYER: '_snd.csv'}
 
 SND_LAYER_FILENAME = 'snd_layer_training_data.csv'
 
+COMPUTE_PREDCIT_PREFIX = 'compute_pred_'
 TOURNAMENT_DATA_FP = DATA_DIRNAME + '/numerai_tournament_data.csv'
 TOURNAMENT_STORE_H5_FP = DATA_DIRNAME + '/tournament_store.h5'
 PREDICTIONS_FILENAME = 'predictions_tournament_'

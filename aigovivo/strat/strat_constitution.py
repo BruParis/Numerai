@@ -10,6 +10,7 @@ class StratConstitution():
         self.cl_params = m_dict.get('cl_params')
         self.final_pred = m_dict.get('final_pred')
         self.snd_layer = m_dict.get('snd_layer')
+        self.compute_aggr = m_dict.get('compute_aggr')
 
     def _generate_dict(self):
         strat_c_dict = dict()
@@ -26,6 +27,8 @@ class StratConstitution():
             strat_c_dict['final_pred'] = self.final_pred
         if self.snd_layer is not None:
             strat_c_dict['snd_layer'] = self.snd_layer
+        if self.compute_aggr is not None:
+            strat_c_dict['compute_aggr'] = self.compute_aggr
 
         return strat_c_dict
 
@@ -37,6 +40,7 @@ class StratConstitution():
         self.clusters = None
         self.snd_layer = None
         self.final_pred = None
+        self.compute_aggr = None
 
     def save(self):
         model_c_dict = self._generate_dict()
