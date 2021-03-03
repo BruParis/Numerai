@@ -61,7 +61,7 @@ def cl_model_build(strat_dir,
 
             print(" === tourn. validation - test data ===")
             valid_eval = model_generator.evaluate_model(
-                valid_ft_data, cl_dirpath)
+                cl_cols, valid_ft_data, cl_dirpath)
 
             log_loss = valid_eval['log_loss']
 

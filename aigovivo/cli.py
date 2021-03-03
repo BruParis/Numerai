@@ -1,6 +1,6 @@
 import click
 
-from .data_analysis import generate_cross_corr, ft_selection, pred_diagnostics, cl_pred_diagnostics
+from .data_analysis import generate_cross_corr, ft_selection, pred_diagnostics, cl_pred_diagnostics, model_ft_imp
 from .strat import make_new_strat
 from .clustering import clustering, simple_era_clustering
 from .format_data import data_setup, split_data_clusters
@@ -107,6 +107,44 @@ def train(debug, metrics, no_save, threadpool, layer, cluster, folder):
         if cluster is not None:
             print("specifying a cluster is unecessary when training a layer")
         generate_models(folder, layer, debug, metrics, save, threadpool)
+    return
+
+
+@cli.command('mftimp')
+@click.option("-m",
+              "--metrics",
+              default=False,
+              show_default=True,
+              is_flag=True)
+@click.option("-ns",
+              "--no-save",
+              default=False,
+              show_default=True,
+              is_flag=True)
+@click.option("-l",
+              "--layer",
+              type=click.Choice(LAYERS, case_sensitive=False),
+              default="fst",
+              prompt=True)
+@click.option("-c", "--cluster", default=None, show_default=True)
+@click.argument('models',
+                type=click.Choice(MODEL_DICT.keys(), case_sensitive=False),
+                default="nn")
+@click.argument('folder', type=click.Path(exists=True))
+def mftimp(metrics, no_save, layer, cluster, models, folder):
+
+    model_types = ['XGBoost', 'RandomForest', 'NeuralNetwork'
+                   ] if models == 'All' else [MODEL_DICT[models]]
+
+    save = not no_save
+    if layer == '0':
+        if cluster is None:
+            print("cluster name not provided")
+            return
+        model_ft_imp(folder, cluster, model_types, metrics, save)
+    else:
+        if cluster is not None:
+            print("specifying a cluster is unecessary when training a layer")
     return
 
 

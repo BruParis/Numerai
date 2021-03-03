@@ -55,6 +55,13 @@ MI_MAT_FP = DATA_DIRNAME + '/mut_i_mat.csv'
 FST_LAYER_TRAIN_RATIO = 0.20
 TEST_RATIO = 0.10
 
+MODEL_DICT = {
+    'xgb': 'XGBoost',
+    'rf': 'RandomForest',
+    'nn': 'NeuralNetwork',
+    'all': 'All'
+}
+
 # era_ft_corr
 ERAS_FT_T_CORR_FP = DATA_DIRNAME + '/eras_ft_target_corr.csv'
 

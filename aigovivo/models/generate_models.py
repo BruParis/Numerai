@@ -93,6 +93,11 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
     cl_dirpath = dirname + '/' + cl
     cl_eras = cl_dict['eras_name']
 
+    # TODO : case when no selected_features
+    # train_data = load_data_by_eras(TRAINING_DATA_FP, cl_eras)
+    # cl_fts = [x for x in train_data.columns if x.startswith('feature_')]
+    # cl_cols = ['id', 'era'] + cl_fts + ['target']
+
     cl_fts = cl_dict['selected_features']
     cl_cols = ['id', 'era'] + cl_fts + ['target']
     train_data = load_data_by_eras(TRAINING_DATA_FP, cl_eras, cols=cl_cols)
@@ -133,7 +138,7 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
                 model = model_generator.build_model(train_input, train_target)
                 print(" === tourn. validation - test data ===")
                 valid_eval = model_generator.evaluate_model(
-                    cl_valid_data, cl_dirpath)
+                    cl_cols, cl_valid_data, cl_dirpath)
 
                 log_loss = valid_eval['log_loss']
 
@@ -269,7 +274,7 @@ def snd_layer_model_build(aggr_dict,
                     model = model_generator.build_model(
                         train_input, train_target)
                     model_dict = model_generator.evaluate_model(
-                        f_valid_target_data, snd_layer_dirpath)
+                        data_cols, f_valid_target_data, snd_layer_dirpath)
                     print("model: ", model)
                     print("model_dict: ", model_dict)
 

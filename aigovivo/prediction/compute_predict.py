@@ -165,11 +165,9 @@ def compute_predict(layer, cluster, folder):
 
             comp_diag_dict = dict()
             comp_diag_dict[compute_aggr_id] = ft_exp_analysis(
-                valid_pred_data, eras_l, valid_data[['era', TARGET_LABEL]],
-                compute_aggr_id, pic_fp)
+                valid_pred_data, eras_l, compute_aggr_id, pic_fp)
             comp_diag_dict[neutr_label] = ft_exp_analysis(
-                valid_pred_data, eras_l, valid_data[['era', TARGET_LABEL]],
-                neutr_label, pic_fp)
+                valid_pred_data, eras_l, neutr_label, pic_fp)
 
             comp_diag_fp = folder + '/compute_diag.json'
             with open(comp_diag_fp, 'w') as fp:

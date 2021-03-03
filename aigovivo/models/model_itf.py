@@ -41,7 +41,7 @@ def load_model(subset_dirname, eModel, model_prefix=None):
         return univ_polyinterpo
 
 
-def generate_model(dirname, eModel, model_params, model_debug=False):
+def contruct_model(dirname, eModel, model_params, model_debug=False):
 
     if eModel == ModelType.RandomForest:
         RF_model = RFModel(dirname, model_params, model_debug)

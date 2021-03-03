@@ -8,7 +8,7 @@ import sklearn.metrics as sm
 from ..common import *
 from ..data_analysis import rank_proba, valid_score
 from .model_abstract import Model, ModelType
-from .model_itf import init_metrics, produce_metrics, generate_model
+from .model_itf import init_metrics, produce_metrics, contruct_model
 
 
 class ModelGenerator():
@@ -136,7 +136,7 @@ class ModelGenerator():
             return None
 
         self.model_params = model_params
-        self.model = generate_model(self.dir_path,
+        self.model = contruct_model(self.dir_path,
                                     self.model_type,
                                     self.model_params,
                                     model_debug=debug)
@@ -160,10 +160,12 @@ class ModelGenerator():
 
         return self.model
 
-    def evaluate_model(self, data_df, cl_dirpath):
-        print("data_df: ", data_df)
+    def evaluate_model(self, cl_cols, valid_df, cl_dirpath):
+        print("valid_df: ", valid_df)
 
-        data_input, data_target = self._format_input_target(data_df)
+        input_df = valid_df[cl_cols]
+
+        data_input, data_target = self._format_input_target(input_df)
 
         data_target['prediction'] = self.model.predict(data_input)
         test_proba = self.model.predict_proba(data_input)
@@ -191,7 +193,7 @@ class ModelGenerator():
         eval_score_dict['accuracy_score'] = accuracy_score
 
         eval_rank = rank_proba(test_proba_df, self.model_type.name)
-        eval_rank['era'] = data_df['era']
+        eval_rank['era'] = valid_df['era']
 
         model_eval_data = pd.concat([test_proba_df, eval_rank], axis=1)
         model_eval_fn = self.model_type.name + '_valid_data.csv'
