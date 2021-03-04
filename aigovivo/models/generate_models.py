@@ -20,6 +20,8 @@ from .model_params import model_params
 
 def load_data(data_fp, cols=None):
     file_reader = ReaderCSV(data_fp)
+
+    cols = ['id'] + cols
     data_df = file_reader.read_csv(columns=cols).set_index("id")
 
     return data_df
@@ -27,8 +29,10 @@ def load_data(data_fp, cols=None):
 
 def load_data_by_eras(data_fp, eras, cols=None):
     file_reader = ReaderCSV(data_fp)
+
+    cols = ['id'] + cols
     data_df = file_reader.read_csv_matching('era', eras,
-                                            columns=cols).set_index("id")
+                                            columns=cols).set_index('id')
 
     return data_df
 
@@ -69,7 +73,7 @@ def gen_aggr_dict(cl_dict):
     for cl, cl_desc in cl_dict.items():
         cl_desc_m = cl_desc['models']
         for model_name, model_desc in cl_desc_m.items():
-            cl_m_w = model_desc['valid_eval']['valid_score']['valid_corr_mean']
+            cl_m_w = model_desc['train_eval']['train_score']['corr_mean']
             if cl_m_w > 0:
                 cl_m_w_sorted.append((cl, model_name, cl_m_w))
 
@@ -99,24 +103,22 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
     # cl_cols = ['id', 'era'] + cl_fts + ['target']
 
     cl_fts = cl_dict['selected_features']
-    cl_cols = ['id', 'era'] + cl_fts + ['target']
-    train_data = load_data_by_eras(TRAINING_DATA_FP, cl_eras, cols=cl_cols)
+    cl_cols = ['era'] + cl_fts + ['target']
+    full_train_data = load_data(TRAINING_DATA_FP, cols=cl_cols)
 
     # Need to reorder ft col by selected_features in model description
-    cl_order_col = ['era'] + cl_fts + ['target']
-    train_data = train_data[cl_order_col]
+    full_train_data = full_train_data[cl_cols]
 
-    cl_valid_data = load_valid_cl_data(TOURNAMENT_DATA_FP, [VALID_TYPE],
-                                       cl_cols)
+    train_data = full_train_data.loc[full_train_data['era'].isin(cl_eras)]
 
     # model_types = ModelType
-    model_types = [ModelType.NeuralNetwork]
+    # model_types = [ModelType.NeuralNetwork]
     # model_types = [ModelType.RandomForest]
     # model_types = [ModelType.XGBoost, ModelType.RandomForest,
     #                ModelType.NeuralNetwork]  # , ModelType.K_NN]
-    # model_types = [
-    #     ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
-    # ]
+    model_types = [
+        ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
+    ]
 
     model_generator = ModelGenerator(cl_dirpath)
     train_input, train_target = model_generator.format_train_data(train_data)
@@ -136,17 +138,18 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
 
                 model_generator.generate_model(m_params, model_debug)
                 model = model_generator.build_model(train_input, train_target)
-                print(" === tourn. validation - test data ===")
-                valid_eval = model_generator.evaluate_model(
-                    cl_cols, cl_valid_data, cl_dirpath)
 
-                log_loss = valid_eval['log_loss']
+                print(" === score data ===")
+                train_eval = model_generator.evaluate_model(
+                    cl_cols, full_train_data, cl_dirpath)
+
+                log_loss = train_eval['log_loss']
 
                 if log_loss < best_ll:
                     best_ll = log_loss
                     filepath, configpath = model.save_model()
                     # model_dict['test_eval'] = test_eval
-                    model_dict['valid_eval'] = valid_eval
+                    model_dict['train_eval'] = train_eval
                     model_dict['model_filepath'] = filepath
                     model_dict['config_filepath'] = configpath
                     cl_dict['models'][model_type.name] = model_dict
@@ -180,7 +183,6 @@ def generate_fst_layer_model(dirname, bDebug, bMetrics, bSaveModel, bMultiProc,
     start_time = time.time()
 
     # Seems there is a pb with multiprocess (mult. proc w/ same dataframe?)
-    model_dict_l = {}
     if bMultiProc:
         models_build_arg = list(
             zip(itertools.repeat(dirname), cl_dict.items(),

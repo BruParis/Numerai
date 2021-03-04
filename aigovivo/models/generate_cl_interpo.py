@@ -69,7 +69,7 @@ def cl_model_build(strat_dir,
                 best_ll = log_loss
                 filepath, configpath = model.save_model()
                 # model_dict['test_eval'] = test_eval
-                interpo_d['valid_eval'] = valid_eval
+                interpo_d['train_eval'] = valid_eval
                 interpo_d['model_filepath'] = filepath
                 interpo_d['config_filepath'] = configpath
 

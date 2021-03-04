@@ -6,7 +6,7 @@ import itertools
 import sklearn.metrics as sm
 
 from ..common import *
-from ..data_analysis import rank_proba, valid_score
+from ..data_analysis import rank_proba, pred_score
 from .model_abstract import Model, ModelType
 from .model_itf import init_metrics, produce_metrics, contruct_model
 
@@ -160,10 +160,9 @@ class ModelGenerator():
 
         return self.model
 
-    def evaluate_model(self, cl_cols, valid_df, cl_dirpath):
-        print("valid_df: ", valid_df)
+    def evaluate_model(self, cl_cols, train_df, cl_dirpath):
 
-        input_df = valid_df[cl_cols]
+        input_df = train_df[cl_cols]
 
         data_input, data_target = self._format_input_target(input_df)
 
@@ -193,18 +192,18 @@ class ModelGenerator():
         eval_score_dict['accuracy_score'] = accuracy_score
 
         eval_rank = rank_proba(test_proba_df, self.model_type.name)
-        eval_rank['era'] = valid_df['era']
+        eval_rank['era'] = train_df['era']
 
         model_eval_data = pd.concat([test_proba_df, eval_rank], axis=1)
-        model_eval_fn = self.model_type.name + '_valid_data.csv'
+        model_eval_fn = self.model_type.name + '_train_data.csv'
         model_eval_fp = cl_dirpath + '/' + model_eval_fn
         with open(model_eval_fp, 'w') as fp:
-            eval_score_dict['valid_data_fp'] = model_eval_fp
+            eval_score_dict['train_data_fp'] = model_eval_fp
             model_eval_data.to_csv(fp)
 
-        eval_score_dict['valid_score'] = valid_score(eval_rank,
-                                                     self.model_type.name,
-                                                     data_target[TARGET_LABEL])
+        eval_score_dict['train_score'] = pred_score(eval_rank,
+                                                    self.model_type.name,
+                                                    data_target[TARGET_LABEL])
 
         print("eval: ", eval_score_dict)
 

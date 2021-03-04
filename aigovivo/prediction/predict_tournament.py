@@ -8,7 +8,7 @@ from ..common import *
 from ..strat import StratConstitution
 from ..reader import ReaderCSV, load_h5_eras
 from ..models import ModelType
-from ..data_analysis import models_valid_score, proba_to_target_label, rank_proba_models, rank_proba, rank_pred, valid_score
+from ..data_analysis import models_valid_score, proba_to_target_label, rank_proba_models, rank_proba, rank_pred, pred_score
 
 from .prediction_operator import PredictionOperator
 
@@ -144,8 +144,8 @@ def aggr_rank(rank_dict, aggr_dict, data_t):
         aggr_pred_dict[aggr_id] = aggr_pred
 
         if data_t == VALID_TYPE:
-            aggr_desc['valid_score'] = valid_score(aggr_pred, aggr_pred_name,
-                                                   valid_target)
+            aggr_desc['valid_score'] = pred_score(aggr_pred, aggr_pred_name,
+                                                  valid_target)
 
     return aggr_pred_dict
 

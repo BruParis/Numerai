@@ -30,31 +30,27 @@ def score(data_df, pred_col_name):
     return res
 
 
-def pred_valid_score(validation_data, pred_col_name):
+def compute_score(data_df, pred_col_name):
 
-    if pred_col_name not in validation_data.columns:
+    if pred_col_name not in data_df.columns:
         return
 
     print("Validation score for prediction type: ", pred_col_name)
 
-    validation_correlations = validation_data.groupby("era").apply(
-        score, pred_col_name)
+    data_correlations = data_df.groupby("era").apply(score, pred_col_name)
 
-    valid_corr_mean = validation_correlations.mean()
-    valid_corr_std = validation_correlations.std()
-    valid_corr_sharpe = valid_corr_mean / valid_corr_std
-    valid_payout = payout(validation_correlations).mean()
+    corr_mean = data_correlations.mean()
+    corr_std = data_correlations.std()
+    corr_sharpe = corr_mean / corr_std
+    # payout = payout(data_correlations).mean()
 
-    print(
-        f"On validation the correlation has mean {valid_corr_mean} and std {valid_corr_std}"
-    )
-    print(f"On validation the average per-era payout is {valid_payout}")
+    print(f"On data the correlation has mean {corr_mean} and std {corr_std}")
+    # print(f"On data the average per-era payout is {valid_payout}")
 
-    valid_score = {
-        'valid_corr_mean': valid_corr_mean,
-        'valid_corr_std': valid_corr_std,
-        'valid_corr_sharpe': valid_corr_sharpe,
-        'valid_payout': valid_payout
+    data_score = {
+        'corr_mean': corr_mean,
+        'corr_std': corr_std,
+        'corr_sharpe': corr_sharpe
     }
 
     # Check consistency -> need proba
@@ -83,7 +79,7 @@ def pred_valid_score(validation_data, pred_col_name):
     # res = {'validation_corr': validation_corr_desc,
     #       'consistency: ': consistency, 'log_loss': ll}
 
-    return valid_score
+    return data_score
 
 
 def models_valid_score(models_dict, model_types, pred_models_df):
@@ -96,7 +92,7 @@ def models_valid_score(models_dict, model_types, pred_models_df):
     print('model_types: ', model_types)
 
     models_scores = {
-        model.name: pred_valid_score(data_target_df, model.name)
+        model.name: compute_score(data_target_df, model.name)
         for model in model_types
     }
 
@@ -106,9 +102,9 @@ def models_valid_score(models_dict, model_types, pred_models_df):
         models_dict[model] = valid_scorr
 
 
-def valid_score(pred_f, pred_name, data_target):
+def pred_score(pred_f, pred_name, data_target):
 
-    valid_df = pd.concat([data_target, pred_f], axis=1)
-    res = pred_valid_score(valid_df, pred_name)
+    data_df = pd.concat([data_target, pred_f], axis=1)
+    res = compute_score(data_df, pred_name)
 
     return res
