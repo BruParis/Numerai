@@ -1,5 +1,4 @@
 import pickle
-import enum
 import json
 import pandas as pd
 import sklearn.metrics as sm
@@ -7,14 +6,6 @@ import sklearn.metrics as sm
 from abc import ABC, abstractmethod
 from ..data_analysis import rank_proba
 from ..common import *
-
-
-class ModelType(enum.Enum):
-    UnivPolyInterpo = 0
-    RandomForest = 1
-    XGBoost = 2
-    K_NN = 3
-    NeuralNetwork = 4
 
 
 class Model(ABC):

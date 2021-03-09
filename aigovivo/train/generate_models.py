@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split
 from ..common import *
 from ..threadpool import pool_map
 from ..reader import ReaderCSV
-from ..strat import StratConstitution
+from ..strat import StratConstitution, Aggregations, make_aggr_dict
 from ..data_analysis import select_imp_ft
 from ..models import Model, ModelType, ModelGenerator, model_params
 
@@ -32,13 +32,6 @@ def load_data(data_fp, cols=None):
     return data_df
 
 
-def load_json(filepath):
-    with open(filepath, 'r') as f:
-        json_data = json.load(f)
-
-        return json_data
-
-
 def make_model_prefix(eModel):
     if eModel is not ModelType.K_NN:
         return [None]
@@ -46,40 +39,14 @@ def make_model_prefix(eModel):
     return [5, 10, 30]
 
 
-def gen_aggr_dict(cl_dict):
-    cl_m_w_sorted = []
-
-    # TODO: make aggregation as a mix of best model for each clusters
-
-    for cl, cl_desc in cl_dict.items():
-        cl_desc_m = cl_desc['models']
-        for model_name, model_desc in cl_desc_m.items():
-            cl_m_w = model_desc['train_eval']['train_score']['corr_mean']
-            if cl_m_w > 0:
-                cl_m_w_sorted.append((cl, model_name, cl_m_w))
-
-    cl_m_w_sorted = sorted(cl_m_w_sorted, key=lambda x: x[2], reverse=True)
-
-    aggr_dict = dict()
-    for i in range(1, len(cl_m_w_sorted)):
-        aggr_cl_m_w = cl_m_w_sorted[:i]
-        aggr_pred_name = AGGR_PREFIX + str(i)
-        aggr_dict[aggr_pred_name] = {
-            'cluster_models': [(cl, m, w) for cl, m, w in aggr_cl_m_w],
-            'total_w': sum([w for *_, w in aggr_cl_m_w])
-        }
-
-    return aggr_dict
-
-
-def build_evaluate_model(train_input,
-                         train_target,
-                         full_train_data,
-                         model_gen,
-                         cl_cols,
-                         r_s,
-                         b_p,
-                         new_fts=None):
+def build_eval_model(train_input,
+                     train_target,
+                     full_train_data,
+                     model_gen,
+                     cl_cols,
+                     r_s,
+                     b_p,
+                     new_fts=None):
     if not b_p and new_fts is None:
         model = model_gen.build_model(train_input,
                                       train_target,
@@ -178,14 +145,14 @@ def cl_model_build(dirname,
             model_gen.generate_model(m_params, model_debug)
 
             print(" === build model ===")
-            model, train_eval = build_evaluate_model(train_input,
-                                                     train_target,
-                                                     full_train_data,
-                                                     model_gen,
-                                                     cl_cols,
-                                                     r_s,
-                                                     b_p,
-                                                     new_fts=new_fts)
+            model, train_eval = build_eval_model(train_input,
+                                                 train_target,
+                                                 full_train_data,
+                                                 model_gen,
+                                                 cl_cols,
+                                                 r_s,
+                                                 b_p,
+                                                 new_fts=new_fts)
 
             print(" === features importance selection ===")
 
@@ -197,14 +164,14 @@ def cl_model_build(dirname,
                 print("     --> new_fts: ", new_fts)
 
                 print(" === snd build model ===")
-                model_2, train_eval_2 = build_evaluate_model(train_input,
-                                                             train_target,
-                                                             full_train_data,
-                                                             model_gen,
-                                                             cl_cols,
-                                                             r_s,
-                                                             b_p,
-                                                             new_fts=new_fts)
+                model_2, train_eval_2 = build_eval_model(train_input,
+                                                         train_target,
+                                                         full_train_data,
+                                                         model_gen,
+                                                         cl_cols,
+                                                         r_s,
+                                                         b_p,
+                                                         new_fts=new_fts)
 
                 if train_eval_2['log_loss'] < train_eval['log_loss']:
                     model = model_2
@@ -248,8 +215,6 @@ def generate_cl_model(dirname, cl, models, r_s, b_p, bFtImp, bDebug, bMetrics,
 def generate_fst_layer_model(dirname, models, r_s, b_p, bFtImp, bDebug,
                              bMetrics, bSaveModel, bMultiProc):
     strat_c_fp = dirname + '/' + STRAT_CONSTITUTION_FILENAME
-    model_a_filepath = dirname + '/' + MODEL_AGGREGATION_FILENAME
-
     strat_c = StratConstitution(strat_c_fp)
     strat_c.load()
 
@@ -282,10 +247,7 @@ def generate_fst_layer_model(dirname, models, r_s, b_p, bFtImp, bDebug,
 
         strat_c.save()
 
-        aggr_dict = gen_aggr_dict(cl_dict)
-
-        with open(model_a_filepath, 'w') as fp:
-            json.dump(aggr_dict, fp, indent=4)
+        make_aggr_dict(dirname)
 
 
 def load_data_filter_id(data_filename, list_id, columns=None):
@@ -381,7 +343,8 @@ def generate_snd_layer_model(dirname, model_types, bDebug, bMetrics,
     strat_c.load()
 
     agg_filepath = dirname + '/' + MODEL_AGGREGATION_FILENAME
-    aggr_dict = load_json(agg_filepath)
+    aggr_dict = Aggregations(agg_filepath)
+    aggr_dict.load()
 
     model_aggr = snd_layer_model_build(aggr_dict,
                                        model_types,

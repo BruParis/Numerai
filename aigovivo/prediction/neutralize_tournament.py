@@ -5,15 +5,8 @@ import pandas as pd
 from ..common import *
 from ..reader import ReaderCSV, load_h5_eras
 from ..utils import get_eras
-from ..data_analysis import neutralize
-from ..data_analysis import rank_pred
-
-
-def load_json(filepath):
-    with open(filepath, 'r') as f:
-        json_data = json.load(f)
-
-        return json_data
+from ..data_analysis import neutralize, rank_pred
+from ..strat import Aggregations
 
 
 def load_data(data_filepath, cols=None):
@@ -23,10 +16,12 @@ def load_data(data_filepath, cols=None):
     return input_data
 
 
-def neutralize_pred(strat_dir):
+def neutralize_pred(strat_dir, model_types):
 
     model_aggr_fp = strat_dir + '/' + MODEL_AGGREGATION_FILENAME
-    aggr_dict = load_json(model_aggr_fp)
+    full_aggr_dict = Aggregations(model_aggr_fp)
+    full_aggr_dict.load()
+    aggr_dict = full_aggr_dict.get_models_aggr(model_types)
 
     predictions_fst_fp = [
         strat_dir + '/' + PREDICTIONS_FILENAME + d_t + PRED_FST_SUFFIX

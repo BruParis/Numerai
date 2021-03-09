@@ -4,21 +4,13 @@ import pandas as pd
 
 from ..common import *
 from ..reader import ReaderCSV
-from ..strat import StratConstitution
+from ..strat import StratConstitution, Aggregations
 from ..utils import get_eras
 from ..data_analysis import rank_proba_models, rank_pred, neutralize, ft_exp_analysis
-from ..models import ModelType
 
 from .prediction_operator import PredictionOperator
 
 ERA_BATCH_SIZE = 32
-
-
-def load_json(filepath):
-    with open(filepath, 'r') as f:
-        json_data = json.load(f)
-
-        return json_data
 
 
 def load_input_data(eras_l):
@@ -101,7 +93,7 @@ def predict_era(folder, strat_c, era, compute_aggr_id, neutr_label, aggr_dict,
     return era_full_pred_df
 
 
-def compute_predict(layer, cluster, folder):
+def compute_predict(layer, cluster, folder, model_types):
 
     # aggr_pred_16 supposed to be the best yet
 
@@ -113,8 +105,19 @@ def compute_predict(layer, cluster, folder):
     neutr_label = compute_aggr_id + NEUTRALIZED_SUFFIX
 
     model_aggr_fp = folder + '/' + MODEL_AGGREGATION_FILENAME
-    aggr_dict = load_json(model_aggr_fp)
-    aggr_dict = aggr_dict[compute_aggr_id]
+    full_aggr_dict = Aggregations(model_aggr_fp)
+    full_aggr_dict.load()
+
+    m_aggr_dict = full_aggr_dict.get_models_aggr(model_types)
+
+    m_aggr_dict = full_aggr_dict.get_models_aggr(model_types)
+    if compute_aggr_id not in m_aggr_dict.keys():
+        model_names = [m.name for m in model_types]
+        print("aggr id {} not available for models: {}".format(
+            compute_aggr_id, model_names))
+        return
+
+    aggr_dict = m_aggr_dict[compute_aggr_id]
 
     cl_models = aggr_dict['cluster_models']
 

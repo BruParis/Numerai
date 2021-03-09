@@ -6,7 +6,6 @@ import time
 from ..common import *
 from ..data_analysis import rank_proba_models
 from ..reader import ReaderCSV, load_h5_eras
-from ..models import ModelType
 from ..strat import StratConstitution
 
 from .prediction_operator import PredictionOperator

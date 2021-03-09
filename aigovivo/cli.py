@@ -1,12 +1,11 @@
 import click
 
 from .data_analysis import generate_cross_corr, ft_selection, pred_diagnostics, cl_pred_diagnostics, model_ft_imp
-from .strat import make_new_strat
+from .strat import make_new_strat, make_aggr_dict
 from .clustering import clustering, simple_era_clustering
 from .format_data import data_setup, split_data_clusters
 from .prediction import make_prediction, cluster_proba, neutralize_pred, upload_results, compute_predict
 from .train import generate_cl_interpo, generate_cl_model, generate_fst_layer_model, generate_snd_layer_model
-from .models import ModelType
 from .common import *
 
 
@@ -146,6 +145,12 @@ def train(debug, metrics, no_save, ft_imp, random_search, best_params,
         generate_snd_layer_model(folder, model_types, debug, metrics, save)
 
 
+@cli.command('aggr')
+@click.argument('folder', type=click.Path(exists=True))
+def aggr(folder):
+    make_aggr_dict(folder)
+
+
 @cli.command('mftimp')
 @click.option("-m",
               "--metrics",
@@ -222,7 +227,7 @@ def exec(threadpool, pred, layer, cluster, models, folder):
     elif pred == 'prediction':
         make_prediction(folder, layer, model_types)
     elif pred == 'neutralize':
-        neutralize_pred(folder)
+        neutralize_pred(folder, model_types)
 
 
 @cli.command('compute')
@@ -232,9 +237,13 @@ def exec(threadpool, pred, layer, cluster, models, folder):
               default="fst",
               prompt=True)
 @click.option("-c", "--cluster", default=None, show_default=True)
+@click.argument('models', default="nn")
 @click.argument('folder', type=click.Path(exists=True))
-def compute(layer, cluster, folder):
-    compute_predict(layer, cluster, folder)
+def compute(layer, cluster, models, folder):
+    model_types = models_from_arg(models)
+    print('model_types: ', model_types)
+
+    compute_predict(layer, cluster, folder, model_types)
 
 
 @cli.command('diag')

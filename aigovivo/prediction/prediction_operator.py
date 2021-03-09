@@ -4,7 +4,7 @@ import itertools
 import numpy as np
 import pandas as pd
 
-from ..models import ModelType, load_model
+from ..models import load_model
 from ..threadpool import pool_map
 from ..reader import ReaderCSV
 from ..common import *

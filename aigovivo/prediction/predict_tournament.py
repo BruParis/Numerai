@@ -7,7 +7,6 @@ import itertools as it
 from ..common import *
 from ..strat import StratConstitution
 from ..reader import ReaderCSV, load_h5_eras
-from ..models import ModelType
 from ..data_analysis import models_valid_score, proba_to_target_label, rank_proba_models, rank_proba, rank_pred, pred_score
 
 from .prediction_operator import PredictionOperator
@@ -276,18 +275,13 @@ def make_prediction_snd(strat_dir, strat_c, aggr_dict, data_types_fp,
             snd_layer_full_data.to_csv(f, index=True)
 
 
-def make_cluster_predict(strat_dir, cl):
+def make_cluster_predict(strat_dir, cl, model_types):
 
     strat_fp = strat_dir + '/' + STRAT_CONSTITUTION_FILENAME
     strat_c = StratConstitution(strat_fp)
     strat_c.load()
 
     eras_type_df = load_eras_data_type()
-
-    # model_types = [
-    #     ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
-    # ]
-    model_types = [ModelType.NeuralNetwork]
 
     cl_dir = strat_dir + '/' + cl
     pred_fp = [
@@ -324,7 +318,8 @@ def make_prediction(strat_dir, layer, model_types):
         ]
         data_types_files = list(
             zip(PREDICTION_TYPES, predictions_fst_fp, proba_cl_fn))
-        make_prediction_fst(strat_dir, strat_c, model_types, aggr_dict, data_types_files)
+        make_prediction_fst(strat_dir, strat_c, model_types, aggr_dict,
+                            data_types_files)
 
     if layer == 'snd':
 
