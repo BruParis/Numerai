@@ -15,7 +15,7 @@ STRAT_ERA_SIMPLE = 'era'
 CLUSTER_METHODS = [
     STRAT_CLUSTER, STRAT_CLUSTER_2, STRAT_ERA_GRAPH, STRAT_ERA_SIMPLE
 ]
-PRED_OPERATIONS = ['proba', 'prediction', 'neutralize', 'upload']
+PRED_OPERATIONS = ['proba', 'prediction', 'neutralize']
 STRA_DIRNAME_DICT = {
     STRAT_CLUSTER: ERA_CL_DIRNAME,
     STRAT_CLUSTER_2: ERA_CL_DIRNAME_2,
@@ -55,12 +55,8 @@ MI_MAT_FP = DATA_DIRNAME + '/mut_i_mat.csv'
 FST_LAYER_TRAIN_RATIO = 0.20
 TEST_RATIO = 0.10
 
-MODEL_DICT = {
-    'xgb': 'XGBoost',
-    'rf': 'RandomForest',
-    'nn': 'NeuralNetwork',
-    'all': 'All'
-}
+MODELS_PSEUDOS = ['xgb', 'rf', 'nn']
+MODEL_DICT = {'xgb': 'XGBoost', 'rf': 'RandomForest', 'nn': 'NeuralNetwork'}
 
 # era_ft_corr
 ERAS_FT_T_CORR_FP = DATA_DIRNAME + '/eras_ft_target_corr.csv'

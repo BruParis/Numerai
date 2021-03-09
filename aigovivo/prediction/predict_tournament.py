@@ -150,12 +150,9 @@ def aggr_rank(rank_dict, aggr_dict, data_t):
     return aggr_pred_dict
 
 
-def make_prediction_fst(strat_dir, strat_c, aggr_dict, data_types_files):
+def make_prediction_fst(strat_dir, strat_c, model_types, aggr_dict,
+                        data_types_files):
 
-    # model_types = [
-    #     ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
-    # ]
-    model_types = [ModelType.RandomForest]
     clusters_dict = strat_c.clusters
 
     file_w_h = {d_t: True for d_t, *_ in data_types_files}
@@ -305,7 +302,7 @@ def make_cluster_predict(strat_dir, cl):
     strat_c.save()
 
 
-def make_prediction(strat_dir, layer):
+def make_prediction(strat_dir, layer, model_types):
     print('data_types: ', PREDICTION_TYPES)
 
     strat_c_fp = strat_dir + '/' + STRAT_CONSTITUTION_FILENAME
@@ -327,7 +324,7 @@ def make_prediction(strat_dir, layer):
         ]
         data_types_files = list(
             zip(PREDICTION_TYPES, predictions_fst_fp, proba_cl_fn))
-        make_prediction_fst(strat_dir, strat_c, aggr_dict, data_types_files)
+        make_prediction_fst(strat_dir, strat_c, model_types, aggr_dict, data_types_files)
 
     if layer == 'snd':
 
@@ -344,13 +341,8 @@ def make_prediction(strat_dir, layer):
         data_types_snd_fp = list(
             zip(PREDICTION_TYPES, pred_fst_fn, pred_snd_fp))
 
-        # model_types_snd = [
-        #     ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
-        # ]
-        model_types_snd = [ModelType.NeuralNetwork]
-
         make_prediction_snd(strat_dir, strat_c, aggr_dict, data_types_snd_fp,
-                            model_types_snd)
+                            model_types)
 
     print("--- %s seconds ---" % (time.time() - start_time))
 

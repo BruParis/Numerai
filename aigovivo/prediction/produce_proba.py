@@ -81,19 +81,13 @@ def make_cluster_proba(strat_dir, strat_c, model_types, data_types,
                     file_w_h_d[cl] = False
 
 
-def cluster_proba(strat_dir, cl=None):
+def cluster_proba(strat_dir, model_types, cl=None):
 
     strat_c_fp = strat_dir + '/' + STRAT_CONSTITUTION_FILENAME
     strat_c = StratConstitution(strat_c_fp)
     strat_c.load()
 
     eras_type_df = load_eras_data_type()
-
-    # model_types = [
-    #     ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
-    # ]
-    # model_types = [ModelType.NeuralNetwork]
-    model_types = [ModelType.RandomForest]
 
     cl_list = strat_c.clusters.keys() if cl is None else [cl]
     make_cluster_proba(strat_dir, strat_c, model_types, PREDICTION_TYPES,

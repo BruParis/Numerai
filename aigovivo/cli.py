@@ -10,6 +10,18 @@ from .models import ModelType
 from .common import *
 
 
+def models_from_arg(models):
+    m_split = models.split(',')
+    for m in m_split:
+        if m not in MODEL_DICT.keys():
+            print('{} is not a refering to any model.'.format(m))
+            exit(0)
+
+    model_types = [ModelType[MODEL_DICT[m]] for m in m_split]
+
+    return model_types
+
+
 @click.group()
 def cli():
     return
@@ -107,17 +119,12 @@ def cl(folder):
               default="fst",
               prompt=True)
 @click.option("-c", "--cluster", default=None, show_default=True)
-@click.argument('models',
-                type=click.Choice(MODEL_DICT.keys(), case_sensitive=False),
-                default="nn")
+@click.argument('models', default="nn")
 @click.argument('folder', type=click.Path(exists=True))
 def train(debug, metrics, no_save, ft_imp, random_search, best_params,
           threadpool, layer, cluster, models, folder):
 
-    model_types = [
-        ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
-    ] if models == 'all' else [ModelType[MODEL_DICT[models]]]
-
+    model_types = models_from_arg(models)
     print('model_types: ', model_types)
 
     save = not no_save
@@ -136,7 +143,7 @@ def train(debug, metrics, no_save, ft_imp, random_search, best_params,
                                  best_params, ft_imp, debug, metrics, save,
                                  threadpool)
     if layer == 'snd':
-        generate_snd_layer_model(folder, debug, metrics, save)
+        generate_snd_layer_model(folder, model_types, debug, metrics, save)
 
 
 @cli.command('mftimp')
@@ -156,14 +163,12 @@ def train(debug, metrics, no_save, ft_imp, random_search, best_params,
               default="fst",
               prompt=True)
 @click.option("-c", "--cluster", default=None, show_default=True)
-@click.argument('models',
-                type=click.Choice(MODEL_DICT.keys(), case_sensitive=False),
-                default="nn")
+@click.argument('models', default="nn")
 @click.argument('folder', type=click.Path(exists=True))
 def mftimp(metrics, no_save, layer, cluster, models, folder):
 
-    model_types = ['XGBoost', 'RandomForest', 'NeuralNetwork'
-                   ] if models == 'All' else [MODEL_DICT[models]]
+    model_types = models_from_arg(models)
+    print('model_types: ', model_types)
 
     save = not no_save
     if layer == '0':
@@ -194,23 +199,28 @@ def mftimp(metrics, no_save, layer, cluster, models, folder):
               default="fst",
               prompt=True)
 @click.option("-c", "--cluster", default=None, show_default=True)
+@click.argument('models', default="nn")
 @click.argument('folder', type=click.Path(exists=True))
-def exec(threadpool, pred, layer, cluster, folder):
+def exec(threadpool, pred, layer, cluster, models, folder):
+
+    model_types = models_from_arg(models)
+    print('model_types: ', model_types)
+
     if pred == 'proba':
         if layer == '0':
             if cluster is None:
                 print("cluster name not provided")
                 return
-            cluster_proba(folder, cluster)
+            cluster_proba(folder, model_types, cluster)
         else:
             if cluster is not None:
                 print(
                     "specifying a cluster is unecessary when training a layer")
             if layer == 'snd':
                 print("snd layer doesn't produce proba")
-            cluster_proba(folder)
+            cluster_proba(folder, model_types)
     elif pred == 'prediction':
-        make_prediction(folder, layer)
+        make_prediction(folder, layer, model_types)
     elif pred == 'neutralize':
         neutralize_pred(folder)
 

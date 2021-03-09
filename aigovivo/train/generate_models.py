@@ -299,6 +299,7 @@ def load_data_filter_id(data_filename, list_id, columns=None):
 
 
 def snd_layer_model_build(aggr_dict,
+                          model_types,
                           snd_layer_dirpath,
                           train_data_fp,
                           valid_data_fp,
@@ -320,11 +321,6 @@ def snd_layer_model_build(aggr_dict,
         train_data, test_data = train_test_split(f_train_target_data,
                                                  test_size=TEST_RATIO)
         test_data['era'] = train_data['era']
-
-        model_types = [
-            ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
-        ]  # , ModelType.K_NN]
-        #model_types = [ModelType.NeuralNetwork]
 
         model_generator = ModelGenerator(snd_layer_dirpath)
         train_input, train_target = model_generator.format_train_data(
@@ -369,7 +365,8 @@ def snd_layer_model_build(aggr_dict,
     return model_aggr_dict
 
 
-def generate_snd_layer_model(dirname, bDebug, bMetrics, bSaveModel):
+def generate_snd_layer_model(dirname, model_types, bDebug, bMetrics,
+                             bSaveModel):
     snd_layer_dirpath = dirname + '/' + SND_LAYER_DIRNAME
 
     snd_layer_train_data_fp = dirname + '/' + SND_LAYER_DIRNAME + '/' + PRED_TRAIN_FILENAME
@@ -387,6 +384,7 @@ def generate_snd_layer_model(dirname, bDebug, bMetrics, bSaveModel):
     aggr_dict = load_json(agg_filepath)
 
     model_aggr = snd_layer_model_build(aggr_dict,
+                                       model_types,
                                        snd_layer_dirpath,
                                        snd_layer_train_data_fp,
                                        snd_layer_valid_data_fp,
