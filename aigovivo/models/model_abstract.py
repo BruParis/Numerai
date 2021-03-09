@@ -66,7 +66,7 @@ class Model(ABC):
             '/' + self.model_name + '_model_config.json'
 
     @abstractmethod
-    def build_model(self, model_params):
+    def build_model(self, model_params, random_search=False):
         pass
 
     @abstractmethod

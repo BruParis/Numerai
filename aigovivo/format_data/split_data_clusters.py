@@ -58,5 +58,5 @@ def split_data_clusters(dirname):
         cluster_data = load_h5_eras(TRAINING_STORE_H5_FP,
                                     cl_eras).set_index('id')
 
-        cl_fts = cl_c['selected_features']
+        cl_fts = cl_c['selected_features'].split('|')
         generate_data_cluster(dirname, cluster_data, cl_name, cl_fts)

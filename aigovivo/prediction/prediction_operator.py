@@ -8,6 +8,20 @@ from ..models import ModelType, load_model
 from ..threadpool import pool_map
 from ..reader import ReaderCSV
 from ..common import *
+from ..data_analysis import rank_proba_models
+
+
+def model_predic_rank(eModel, model, model_fts, input_data):
+    columns_labels = [
+        eModel.name + '_' + proba_label for proba_label in COL_PROBA_NAMES
+    ]
+
+    proba_df = model.predict_proba(input_data[model_fts])
+    proba_df = pd.DataFrame(proba_df, input_data.index, columns=columns_labels)
+
+    rank_df = rank_proba_models(proba_df, [eModel])
+
+    return rank_df
 
 
 class PredictionOperator():
@@ -35,7 +49,7 @@ class PredictionOperator():
         return prediction_proba_df
 
     def _model_proba(self, input_data, cluster, eModel, model_desc):
-        cl_ft = cluster['selected_features']
+        cl_ft = cluster['selected_features'].split('|')
         input_data_ft = input_data[cl_ft]
         # input_target = input_data[TARGET_LABEL]
 

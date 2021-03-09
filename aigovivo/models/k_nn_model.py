@@ -9,7 +9,7 @@ class K_NNModel(Model):
         Model.__init__(self, ModelType.K_NN, dirname, model_params, debug,
                        filename)
 
-    def build_model(self, train_input, train_target):
+    def build_model(self, train_input, train_target, random_search=False):
 
         if self.debug:
             print("model params: ", self.model_params)

@@ -89,10 +89,11 @@ def cluster_proba(strat_dir, cl=None):
 
     eras_type_df = load_eras_data_type()
 
-    model_types = [
-        ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
-    ]
+    # model_types = [
+    #     ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
+    # ]
     # model_types = [ModelType.NeuralNetwork]
+    model_types = [ModelType.RandomForest]
 
     cl_list = strat_c.clusters.keys() if cl is None else [cl]
     make_cluster_proba(strat_dir, strat_c, model_types, PREDICTION_TYPES,

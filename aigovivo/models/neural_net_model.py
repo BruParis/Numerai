@@ -88,9 +88,15 @@ class NeuralNetwork(Model):
 
         return train_t_labels
 
-    def build_model(self, train_input, train_target):
+    def build_model(self, train_input, train_target, random_search=False):
         if self.debug:
             print("model params: ", self.model_params)
+
+        if ERA_LABEL in train_input.columns:
+            train_input = train_input.drop([ERA_LABEL], axis=1)
+
+        if ERA_LABEL in train_target.columns:
+            train_target = train_target.drop([ERA_LABEL], axis=1)
 
         train_input = train_input - MEAN
 

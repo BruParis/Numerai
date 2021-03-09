@@ -77,6 +77,6 @@ def cl_feature_selection(era_l, cl_dict, data_fp):
         cl_caract['mean_t_corr'] = era_ft_t_corr[
             cl_sel_ft.index.tolist()].mean()
 
-        cl_caract['selected_features'] = cl_sel_ft.index.tolist()
+        cl_caract['selected_features'] = '|'.join(cl_sel_ft.index.tolist())
 
     return cl_dict

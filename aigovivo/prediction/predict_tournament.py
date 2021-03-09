@@ -152,9 +152,10 @@ def aggr_rank(rank_dict, aggr_dict, data_t):
 
 def make_prediction_fst(strat_dir, strat_c, aggr_dict, data_types_files):
 
-    model_types = [
-        ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
-    ]
+    # model_types = [
+    #     ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
+    # ]
+    model_types = [ModelType.RandomForest]
     clusters_dict = strat_c.clusters
 
     file_w_h = {d_t: True for d_t, *_ in data_types_files}

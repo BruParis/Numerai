@@ -4,13 +4,17 @@ import errno
 
 from ..strat import StratConstitution
 from ..common import *
-
-from .generate_models import load_data_by_eras, load_valid_cl_data
-from .model_generator import ModelGenerator
-from .model_abstract import Model, ModelType
-from .model_params import interpo_params
+from ..models import ModelGenerator, Model, ModelType, interpo_params
 
 CL_INTERPO_FP = 'interpo_fp.json'
+
+
+def load_valid_cl_data():
+    return None
+
+
+def load_data_by_eras():
+    return None
 
 
 def cl_model_build(strat_dir,
@@ -23,7 +27,7 @@ def cl_model_build(strat_dir,
 
     cl_eras = cl_dict['eras_name']
 
-    cl_fts = cl_dict['selected_features']
+    cl_fts = cl_dict['selected_features'].split('|')
     cl_cols = ['id', 'era'] + cl_fts + ['target']
 
     train_data = load_data_by_eras(TRAINING_DATA_FP, cl_eras, cols=cl_cols)

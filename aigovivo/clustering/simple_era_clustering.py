@@ -97,7 +97,8 @@ def eras_clustering(era_l, features):
         era_dict[era] = dict()
         era_dict[era]['eras_name'] = [era]
         era_dict[era]['mean_t_corr'] = selected_ft_t_corr.mean()
-        era_dict[era]['selected_features'] = selected_ft_t_corr.index.tolist()
+        era_dict[era]['selected_features'] = '|'.join(
+            selected_ft_t_corr.index.tolist())
 
     return era_dict
 

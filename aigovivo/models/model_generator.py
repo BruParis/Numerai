@@ -36,9 +36,8 @@ class ModelGenerator():
 
         data_aux = data_df.copy()
 
-        # if self.model_type is not ModelType.XGBoost:
-        if ERA_LABEL in data_aux.columns:
-            data_aux = data_aux.drop([ERA_LABEL], axis=1)
+        # if ERA_LABEL in data_aux.columns:
+        #     data_aux = data_aux.drop([ERA_LABEL], axis=1)
 
         input_df = data_aux.drop([TARGET_LABEL], axis=1)
         target_df = data_aux.loc[:, [TARGET_LABEL]]
@@ -80,7 +79,7 @@ class ModelGenerator():
                 axis=0)
 
         res = pd.concat([supp_train_data, train_data], axis=0)
-        res = res.sample(frac=1)
+        res = res.groupby('era').sample(frac=1)
         res_sampling_dict = {
             t: len(res.loc[res[TARGET_LABEL] == t].index)
             for t in TARGET_VALUES
@@ -149,9 +148,12 @@ class ModelGenerator():
 
         return train_input, train_target
 
-    def build_model(self, train_input, train_target):
+    def build_model(self, train_input, train_target, random_search=False):
 
-        self.model.build_model(train_input, train_target)
+        if self.model_type == ModelType.RandomForest or self.model_type == ModelType.XGBoost:
+            self.model.build_model(train_input, train_target, random_search)
+        else:
+            self.model.build_model(train_input, train_target)
 
         model_dict = dict()
         model_dict['type'] = self.model_type.name
@@ -160,11 +162,14 @@ class ModelGenerator():
 
         return self.model
 
-    def evaluate_model(self, cl_cols, train_df, cl_dirpath):
+    def evaluate_model(self, cl_cols, train_df):
 
         input_df = train_df[cl_cols]
 
         data_input, data_target = self._format_input_target(input_df)
+
+        if ERA_LABEL in data_input.columns:
+            data_input = data_input.drop([ERA_LABEL], axis=1)
 
         data_target['prediction'] = self.model.predict(data_input)
         test_proba = self.model.predict_proba(data_input)
@@ -196,7 +201,7 @@ class ModelGenerator():
 
         model_eval_data = pd.concat([test_proba_df, eval_rank], axis=1)
         model_eval_fn = self.model_type.name + '_train_data.csv'
-        model_eval_fp = cl_dirpath + '/' + model_eval_fn
+        model_eval_fp = self.dir_path + '/' + model_eval_fn
         with open(model_eval_fp, 'w') as fp:
             eval_score_dict['train_data_fp'] = model_eval_fp
             model_eval_data.to_csv(fp)

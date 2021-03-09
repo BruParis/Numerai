@@ -31,8 +31,9 @@ def model_params(layer, eModel, model_prefix=None):
 
 def make_fst_layer_model_params(eModel, model_prefix=None):
     if eModel == ModelType.RandomForest:
-        n_est = [220]  # np.linspace(start=180, stop=250, num=20)
-        max_d = [10]  # np.linspace(10, 20, num=5)
+        n_est = [120]  # [220]  # np.linspace(start=180, stop=250, num=20)
+        max_d = [118]  #[10]  # np.linspace(10, 20, num=5)
+        # min sample split
         model_params_array = map(
             lambda x: {
                 'n_estimators': int(x[0]),
@@ -42,10 +43,11 @@ def make_fst_layer_model_params(eModel, model_prefix=None):
         return model_params_array
 
     if eModel == ModelType.XGBoost:
-        n_est = [220]  # np.linspace(start=180, stop=250, num=10)
-        max_d = [10]  # np.linspace(10, 20, num=5)
+        n_est = [75]  # [220]  # np.linspace(start=180, stop=250, num=10)
+        max_d = [50]  # [10]  # np.linspace(10, 20, num=5)
         # eta = learning_rate
         eta = [1.0]  # np.logspace(start=(-1.0), stop=0.0, base=10.0, num=5)
+        # min sample split
 
         model_params_array = map(
             lambda x: {

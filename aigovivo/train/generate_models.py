@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import random
 import numpy as np
 import pandas as pd
 import itertools
@@ -12,43 +13,23 @@ from ..common import *
 from ..threadpool import pool_map
 from ..reader import ReaderCSV
 from ..strat import StratConstitution
-
-from .model_abstract import Model, ModelType
-from .model_generator import ModelGenerator
-from .model_params import model_params
+from ..data_analysis import select_imp_ft
+from ..models import Model, ModelType, ModelGenerator, model_params
 
 
 def load_data(data_fp, cols=None):
     file_reader = ReaderCSV(data_fp)
 
-    cols = ['id'] + cols
-    data_df = file_reader.read_csv(columns=cols).set_index("id")
+    if cols is None:
+        data_df = file_reader.read_csv().set_index("id")
+    else:
+        cols = ['id'] + cols
+        data_df = file_reader.read_csv(columns=cols).set_index("id")
+
+    if 'data_type' in data_df.columns:
+        data_df = data_df.drop(['data_type'], axis=1)
 
     return data_df
-
-
-def load_data_by_eras(data_fp, eras, cols=None):
-    file_reader = ReaderCSV(data_fp)
-
-    cols = ['id'] + cols
-    data_df = file_reader.read_csv_matching('era', eras,
-                                            columns=cols).set_index('id')
-
-    return data_df
-
-
-def load_valid_cl_data(data_fp, data_types, cols):
-    f_r = ReaderCSV(data_fp)
-    valid_data = f_r.read_csv_matching('data_type', data_types,
-                                       columns=cols).set_index('id')
-
-    # TODO : move reindex to model_handler (model_generator)
-    if 'id' in cols:
-        cols.remove('id')
-
-    valid_data = valid_data.reindex(columns=cols)
-
-    return valid_data
 
 
 def load_json(filepath):
@@ -91,18 +72,62 @@ def gen_aggr_dict(cl_dict):
     return aggr_dict
 
 
-def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
+def build_evaluate_model(train_input,
+                         train_target,
+                         full_train_data,
+                         model_gen,
+                         cl_cols,
+                         r_s,
+                         b_p,
+                         new_fts=None):
+    if not b_p and new_fts is None:
+        model = model_gen.build_model(train_input,
+                                      train_target,
+                                      random_search=r_s)
+
+        print(" === evaluate model ===")
+        print("full_train_data: ", full_train_data)
+        train_eval = model_gen.evaluate_model(cl_cols, full_train_data)
+    else:
+        print("     -> use important features")
+        print("     -> new_fts: ", new_fts)
+        new_cols = ['era'] + new_fts
+        train_ft_filter = train_input[new_cols]
+
+        model = model_gen.build_model(train_ft_filter,
+                                      train_target,
+                                      random_search=r_s)
+
+        print(" === evaluate model ===")
+        new_cols = ['era'] + new_fts + ['target']
+        train_eval = model_gen.evaluate_model(new_cols, full_train_data)
+
+    print("train_eval: ", train_eval)
+    return model, train_eval
+
+
+def cl_model_build(dirname,
+                   cl,
+                   cl_dict,
+                   model_types,
+                   r_s,
+                   b_p,
+                   bFtImp=False,
+                   bSaveModel=False,
+                   bMetrics=False,
+                   model_debug=False):
     print("build model cluster: ", cl)
+    print("r_s: ", r_s)
 
     cl_dirpath = dirname + '/' + cl
     cl_eras = cl_dict['eras_name']
 
     # TODO : case when no selected_features
-    # train_data = load_data_by_eras(TRAINING_DATA_FP, cl_eras)
-    # cl_fts = [x for x in train_data.columns if x.startswith('feature_')]
-    # cl_cols = ['id', 'era'] + cl_fts + ['target']
+    # full_train_data = load_data(TRAINING_DATA_FP)
+    # cl_fts = [x for x in full_train_data.columns if x.startswith('feature_')]
+    # cl_cols = ['era'] + cl_fts + ['target']
 
-    cl_fts = cl_dict['selected_features']
+    cl_fts = cl_dict['selected_features'].split('|')
     cl_cols = ['era'] + cl_fts + ['target']
     full_train_data = load_data(TRAINING_DATA_FP, cols=cl_cols)
 
@@ -111,51 +136,100 @@ def cl_model_build(dirname, cl, cl_dict, bMetrics=False, model_debug=False):
 
     train_data = full_train_data.loc[full_train_data['era'].isin(cl_eras)]
 
-    # model_types = ModelType
-    # model_types = [ModelType.NeuralNetwork]
-    # model_types = [ModelType.RandomForest]
-    # model_types = [ModelType.XGBoost, ModelType.RandomForest,
-    #                ModelType.NeuralNetwork]  # , ModelType.K_NN]
-    model_types = [
-        ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
-    ]
+    print('model_types: ', model_types)
 
-    model_generator = ModelGenerator(cl_dirpath)
-    train_input, train_target = model_generator.format_train_data(train_data)
+    model_gen = ModelGenerator(cl_dirpath)
+    train_input, train_target = model_gen.format_train_data(train_data)
 
     for model_type in model_types:
-        for model_prefix in make_model_prefix(model_type):
 
-            model_generator.start_model_type(model_type, model_prefix,
-                                             bMetrics)
+        orig_m_d = cl_dict['models'][
+            model_type.name] if model_type.name in cl_dict['models'].keys(
+            ) else None
 
-            model_params_array = model_params('fst', model_type, model_prefix)
+        if orig_m_d is None and b_p:
+            print('no original model to get best_params from')
+            continue
 
-            best_ll = sys.float_info.max
-            for m_params in model_params_array:
+        if 'best_params' not in orig_m_d.keys() and b_p:
+            print('no best_params in original model')
+            continue
 
-                model_dict = dict()
+        # K_NN not used for now
+        #for model_prefix in make_model_prefix(model_type):
+        model_prefix = None
+        model_gen.start_model_type(model_type, model_prefix, bMetrics)
 
-                model_generator.generate_model(m_params, model_debug)
-                model = model_generator.build_model(train_input, train_target)
+        model_params_array = [orig_m_d['best_params']
+                              ] if b_p else model_params(
+                                  'fst', model_type, model_prefix)
 
-                print(" === score data ===")
-                train_eval = model_generator.evaluate_model(
-                    cl_cols, full_train_data, cl_dirpath)
+        best_ll = sys.float_info.max
+        for m_params in model_params_array:
 
-                log_loss = train_eval['log_loss']
+            model_dict = dict()
 
-                if log_loss < best_ll:
-                    best_ll = log_loss
-                    filepath, configpath = model.save_model()
-                    # model_dict['test_eval'] = test_eval
-                    model_dict['train_eval'] = train_eval
-                    model_dict['model_filepath'] = filepath
-                    model_dict['config_filepath'] = configpath
-                    cl_dict['models'][model_type.name] = model_dict
+            new_fts = None
+            if 'imp_fts' in orig_m_d.keys(
+            ) and orig_m_d['imp_fts'] is not None:
+                print("orig_m_d['imp_fts']: ", orig_m_d['imp_fts'])
+                new_fts = orig_m_d['imp_fts'].split('|')
+
+            model_gen.generate_model(m_params, model_debug)
+
+            print(" === build model ===")
+            model, train_eval = build_evaluate_model(train_input,
+                                                     train_target,
+                                                     full_train_data,
+                                                     model_gen,
+                                                     cl_cols,
+                                                     r_s,
+                                                     b_p,
+                                                     new_fts=new_fts)
+
+            print(" === features importance selection ===")
+
+            if bFtImp:
+                ft_sel = cl_fts if not b_p or new_fts is None else new_fts
+                new_fts = select_imp_ft(full_train_data, model_type, ft_sel,
+                                        model, train_eval['train_score'])
+
+                print("     --> new_fts: ", new_fts)
+
+                print(" === snd build model ===")
+                model_2, train_eval_2 = build_evaluate_model(train_input,
+                                                             train_target,
+                                                             full_train_data,
+                                                             model_gen,
+                                                             cl_cols,
+                                                             r_s,
+                                                             b_p,
+                                                             new_fts=new_fts)
+
+                if train_eval_2['log_loss'] < train_eval['log_loss']:
+                    model = model_2
+
+            log_loss = train_eval['log_loss']
+            if log_loss < best_ll and bSaveModel:
+                best_ll = log_loss
+                filepath, configpath = model.save_model()
+                # model_dict['test_eval'] = test_eval
+                model_dict[
+                    'train_eval'] = train_eval_2 if bFtImp else train_eval
+                if bFtImp:
+                    model_dict['train_eval_cl_ft'] = train_eval
+                model_dict['model_filepath'] = filepath
+                model_dict['config_filepath'] = configpath
+                model_dict['imp_fts'] = '|'.join(new_fts) if bFtImp else None
+                model_dict['params'] = model.model_params
+                if r_s:
+                    model_dict['best_params'] = model.model_params
+                model_dict['random_search'] = r_s
+                cl_dict['models'][model_type.name] = model_dict
 
 
-def generate_cl_model(dirname, cl, bDebug, bMetrics, bSaveModel):
+def generate_cl_model(dirname, cl, models, r_s, b_p, bFtImp, bDebug, bMetrics,
+                      bSaveModel):
 
     strat_c_fp = dirname + '/' + STRAT_CONSTITUTION_FILENAME
     strat_c = StratConstitution(strat_c_fp)
@@ -163,15 +237,16 @@ def generate_cl_model(dirname, cl, bDebug, bMetrics, bSaveModel):
 
     cl_dict = strat_c.clusters[cl]
 
-    cl_model_build(dirname, cl, cl_dict, bMetrics, bDebug)
+    cl_model_build(dirname, cl, cl_dict, models, r_s, b_p, bFtImp, bSaveModel,
+                   bMetrics, bDebug)
 
     if bSaveModel:
         print("strat_c_fp: ", strat_c_fp)
         strat_c.save()
 
 
-def generate_fst_layer_model(dirname, bDebug, bMetrics, bSaveModel, bMultiProc,
-                             bSaveModelDict):
+def generate_fst_layer_model(dirname, models, r_s, b_p, bFtImp, bDebug,
+                             bMetrics, bSaveModel, bMultiProc):
     strat_c_fp = dirname + '/' + STRAT_CONSTITUTION_FILENAME
     model_a_filepath = dirname + '/' + MODEL_AGGREGATION_FILENAME
 
@@ -195,13 +270,14 @@ def generate_fst_layer_model(dirname, bDebug, bMetrics, bSaveModel, bMultiProc,
         model_dict_l = dict(cl_dir_model_l)
     else:
         for cl, cl_c in cl_dict.items():
-            cl_model_build(dirname, cl, cl_c, bMetrics, bDebug)
+            cl_model_build(dirname, cl, cl_c, models, r_s, b_p, bFtImp,
+                           bSaveModel, bMetrics, bDebug)
             continue
 
     print("model building done")
     print("--- %s seconds ---" % (time.time() - start_time))
 
-    if bSaveModel or bSaveModelDict:
+    if bSaveModel:
         print("strat_c_fp: ", strat_c_fp)
 
         strat_c.save()
@@ -276,7 +352,7 @@ def snd_layer_model_build(aggr_dict,
                     model = model_generator.build_model(
                         train_input, train_target)
                     model_dict = model_generator.evaluate_model(
-                        data_cols, f_valid_target_data, snd_layer_dirpath)
+                        data_cols, f_valid_target_data)
                     print("model: ", model)
                     print("model_dict: ", model_dict)
 
@@ -323,15 +399,3 @@ def generate_snd_layer_model(dirname, bDebug, bMetrics, bSaveModel):
         print("strat_c.snd_layer: ", strat_c.snd_layer)
 
         strat_c.save()
-
-
-def generate_models(strat_dir, layer, bDebug, bMetrics, bSaveModel,
-                    bMultiProc):
-
-    bSaveModelDict = bSaveModel
-
-    if layer == 'fst':
-        generate_fst_layer_model(strat_dir, bDebug, bMetrics, bSaveModel,
-                                 bMultiProc, bSaveModelDict)
-    elif layer == 'snd':
-        generate_snd_layer_model(strat_dir, bDebug, bMetrics, bSaveModel)

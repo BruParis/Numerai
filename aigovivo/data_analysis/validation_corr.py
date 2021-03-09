@@ -30,12 +30,13 @@ def score(data_df, pred_col_name):
     return res
 
 
-def compute_score(data_df, pred_col_name):
+def compute_score(data_df, pred_col_name, bDebug=False):
 
     if pred_col_name not in data_df.columns:
         return
 
-    print("Validation score for prediction type: ", pred_col_name)
+    if bDebug:
+        print("Validation score for prediction type: ", pred_col_name)
 
     data_correlations = data_df.groupby("era").apply(score, pred_col_name)
 
@@ -44,7 +45,9 @@ def compute_score(data_df, pred_col_name):
     corr_sharpe = corr_mean / corr_std
     # payout = payout(data_correlations).mean()
 
-    print(f"On data the correlation has mean {corr_mean} and std {corr_std}")
+    if bDebug:
+        print(
+            f"On data the correlation has mean {corr_mean} and std {corr_std}")
     # print(f"On data the average per-era payout is {valid_payout}")
 
     data_score = {
@@ -102,9 +105,9 @@ def models_valid_score(models_dict, model_types, pred_models_df):
         models_dict[model] = valid_scorr
 
 
-def pred_score(pred_f, pred_name, data_target):
+def pred_score(pred_f, pred_name, data_target, bDebug=True):
 
     data_df = pd.concat([data_target, pred_f], axis=1)
-    res = compute_score(data_df, pred_name)
+    res = compute_score(data_df, pred_name, bDebug)
 
     return res
