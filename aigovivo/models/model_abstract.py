@@ -68,6 +68,9 @@ class Model(ABC):
     def predict_proba(self, data_input):
         pass
 
+    def write_metrics(self, train_eval, num_metrics):
+        return
+
     def model_config(self):
         config = {'n_features': self.n_features}
         config['model_type'] = self.model_type.name

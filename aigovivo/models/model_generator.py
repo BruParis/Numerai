@@ -8,29 +8,30 @@ import sklearn.metrics as sm
 from ..common import *
 from ..data_analysis import rank_proba, pred_score
 from .model_abstract import Model, ModelType
-from .model_itf import init_metrics, produce_metrics, contruct_model
+from .model_itf import construct_model, get_metrics_filename
 
 
 class ModelGenerator():
-    def _init_metrics(self):
-        metrics_filepath, metrics_header = init_metrics(
-            self.dir_path, self.model_type, self.model_prefix)
+    def _append_new_metrics(self, train_eval):
 
-        with open(metrics_filepath, 'w') as f:
-            metrics_header.to_csv(f, header=True, index=False)
-            self.metrics_filepath = metrics_filepath
+        cols_n = [k for k in self.model_params.keys()
+                  ] + ['log_loss', 'accuracy_score', 'corr_mean']
+        log_loss = train_eval['log_loss']
+        accuracy_score = train_eval['accuracy_score']
+        corr_mean = train_eval['train_score']['corr_mean']
+        m_values = [v for v in self.model_params.values()
+                    ] + [log_loss, accuracy_score, corr_mean]
+        metrics_df = pd.DataFrame(data=[m_values], columns=cols_n)
 
-    def _append_new_metrics(self, model, log_loss, accuracy_score):
+        metrics_fp = self.dir_path + '/' + get_metrics_filename(
+            self.model_type)
 
-        if self.model_type is None:
-            print("Error: File path absent to append new metrics.")
-            return None
+        w_header = self.num_metrics == 0
+        w_a = 'w' if w_header else 'a'
+        with open(metrics_fp, w_a) as f:
+            metrics_df.to_csv(f, header=w_header, index=False)
 
-        metrics_df = produce_metrics(model, log_loss, accuracy_score,
-                                     self.model_prefix)
-
-        with open(self.metrics_filepath, 'a') as f:
-            metrics_df.to_csv(f, header=False, index=False)
+        self.num_metrics += 1
 
     def _format_input_target(self, data_df):
 
@@ -111,6 +112,7 @@ class ModelGenerator():
 
         self.model = None
         self.model_params = None
+        self.num_metrics = 0
 
     def start_model_type(self,
                          model_type,
@@ -120,9 +122,7 @@ class ModelGenerator():
         self.model_prefix = model_prefix
 
         self.write_metrics = write_metrics
-
-        if self.write_metrics:
-            self._init_metrics()
+        self.num_metrics = 0
 
     def generate_model(self, model_params, debug=False):
 
@@ -135,10 +135,10 @@ class ModelGenerator():
             return None
 
         self.model_params = model_params
-        self.model = contruct_model(self.dir_path,
-                                    self.model_type,
-                                    self.model_params,
-                                    model_debug=debug)
+        self.model = construct_model(self.dir_path,
+                                     self.model_type,
+                                     self.model_params,
+                                     model_debug=debug)
 
     def format_train_data(self, train_data):
         balanced_train_data = self._oversampling(train_data)
@@ -212,7 +212,11 @@ class ModelGenerator():
 
         print("eval: ", eval_score_dict)
 
+        if self.model_type is ModelType.NeuralNetwork:
+            print("plot history")
+            self.model.save_hist_plot(suffix=self.num_metrics)
+
         if self.write_metrics:
-            self._append_new_metrics(self.model, log_loss, accuracy_score)
+            self._append_new_metrics(eval_score_dict)
 
         return eval_score_dict

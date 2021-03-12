@@ -113,12 +113,14 @@ def cl_model_build(dirname,
         orig_m_d = cl_dict['models'][
             model_type.name] if model_type.name in cl_dict['models'].keys(
             ) else None
+        no_m_d = orig_m_d is None
 
-        if orig_m_d is None and b_p:
+        if no_m_d and b_p:
             print('no original model to get best_params from')
             continue
 
-        if 'best_params' not in orig_m_d.keys() and b_p:
+        has_b_p = False if no_m_d else 'best_params' not in orig_m_d.keys()
+        if b_p and not has_b_p:
             print('no best_params in original model')
             continue
 
@@ -129,7 +131,7 @@ def cl_model_build(dirname,
 
         model_params_array = [orig_m_d['best_params']
                               ] if b_p else model_params(
-                                  'fst', model_type, model_prefix)
+                                  'fst', model_type, bMetrics, model_prefix)
 
         best_ll = sys.float_info.max
         for m_params in model_params_array:
@@ -137,10 +139,12 @@ def cl_model_build(dirname,
             model_dict = dict()
 
             new_fts = None
-            if 'imp_fts' in orig_m_d.keys(
-            ) and orig_m_d['imp_fts'] is not None:
+            has_imp_fts = not no_m_d and 'imp_fts' in orig_m_d.keys()
+            if has_imp_fts:
                 print("orig_m_d['imp_fts']: ", orig_m_d['imp_fts'])
-                new_fts = orig_m_d['imp_fts'].split('|')
+                orig_imp_fts = orig_m_d['imp_fts']
+                if orig_imp_fts is not None:
+                    new_fts = orig_imp_fts.split('|')
 
             model_gen.generate_model(m_params, model_debug)
 
@@ -154,9 +158,8 @@ def cl_model_build(dirname,
                                                  b_p,
                                                  new_fts=new_fts)
 
-            print(" === features importance selection ===")
-
             if bFtImp:
+                print(" === features importance selection ===")
                 ft_sel = cl_fts if not b_p or new_fts is None else new_fts
                 new_fts = select_imp_ft(full_train_data, model_type, ft_sel,
                                         model, train_eval['train_score'])
@@ -250,16 +253,6 @@ def generate_fst_layer_model(dirname, models, r_s, b_p, bFtImp, bDebug,
         make_aggr_dict(dirname)
 
 
-def load_data_filter_id(data_filename, list_id, columns=None):
-
-    print("list_id: ", list_id)
-    file_reader = ReaderCSV(data_filename)
-    data_df = file_reader.read_csv_filter_id(list_id,
-                                             columns=columns).set_index("id")
-
-    return data_df
-
-
 def snd_layer_model_build(aggr_dict,
                           model_types,
                           snd_layer_dirpath,
@@ -299,7 +292,7 @@ def snd_layer_model_build(aggr_dict,
                 model_generator.start_model_type(model_type, model_prefix,
                                                  bMetrics)
 
-                model_params_array = model_params('snd', model_type,
+                model_params_array = model_params('snd', model_type, bMetrics,
                                                   model_prefix)
 
                 best_ll = sys.float_info.max

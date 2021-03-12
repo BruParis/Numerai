@@ -1,4 +1,5 @@
 import itertools
+import numpy as np
 
 from .model_abstract import Model, ModelType
 
@@ -21,18 +22,18 @@ def interpo_params():
     return model_params_array
 
 
-def model_params(layer, eModel, model_prefix=None):
+def model_params(layer, eModel, metrics=False, model_prefix=None):
 
     if layer == 'fst':
-        return make_fst_layer_model_params(eModel, model_prefix=None)
+        return make_fst_layer_model_params(eModel, metrics, model_prefix=None)
     elif layer == 'snd':
-        return make_snd_layer_model_params(eModel, model_prefix=None)
+        return make_snd_layer_model_params(eModel, metrics, model_prefix=None)
 
 
-def make_fst_layer_model_params(eModel, model_prefix=None):
+def make_fst_layer_model_params(eModel, metrics, model_prefix=None):
     if eModel == ModelType.RandomForest:
-        n_est = [120]  # [220]  # np.linspace(start=180, stop=250, num=20)
-        max_d = [118]  #[10]  # np.linspace(10, 20, num=5)
+        n_est = np.linspace(start=180, stop=250, num=20) if metrics else [120]
+        max_d = np.linspace(10, 20, num=5) if metrics else [118]
         # min sample split
         model_params_array = map(
             lambda x: {
@@ -43,10 +44,11 @@ def make_fst_layer_model_params(eModel, model_prefix=None):
         return model_params_array
 
     if eModel == ModelType.XGBoost:
-        n_est = [75]  # [220]  # np.linspace(start=180, stop=250, num=10)
-        max_d = [50]  # [10]  # np.linspace(10, 20, num=5)
+        n_est = np.linspace(start=180, stop=250, num=10) if metrics else [75]
+        max_d = np.linspace(10, 20, num=5) if metrics else [50]
         # eta = learning_rate
-        eta = [1.0]  # np.logspace(start=(-1.0), stop=0.0, base=10.0, num=5)
+        eta = np.logspace(start=(-1.0), stop=0.0, base=10.0,
+                          num=5) if metrics else [1.0]
         # min sample split
 
         model_params_array = map(
@@ -59,24 +61,29 @@ def make_fst_layer_model_params(eModel, model_prefix=None):
         return model_params_array
 
     if eModel == ModelType.NeuralNetwork:
-        num_layers = [1]  # np.linspace(start=1, stop=4, num=1)
-        layer_size_factor = [0.66]
-        train_batch_size = [50]
-        num_epoch = [30]
+        num_layers = range(1, 4) if metrics else [1]
+        layer_size_factor = np.linspace(start=0.5, stop=1,
+                                        num=5) if metrics else [0.66]
+        # train_batch_size = np.linspace(start=10, stop=100, num=4)  if metrics else [100]
+        func_activation = ['sigmoid', 'relu', 'softmax'
+                           ] if metrics else ['softmax']
+        # use gelu isteand of relu ?
+        num_epoch = [150]
+
         model_params_array = map(
             lambda x: {
                 'num_layers': int(x[0]),
                 'size_factor': float(x[1]),
-                'train_batch_size': int(x[2]),
+                'func_activation': x[2],
                 'num_epoch': int(x[3])
             },
             itertools.product(
-                *[num_layers, layer_size_factor, train_batch_size, num_epoch]))
+                *[num_layers, layer_size_factor, func_activation, num_epoch]))
 
         return model_params_array
 
     if eModel == ModelType.K_NN:
-        leaf_size = [20]  # np.linspace(start=20, stop=50, num=1)
+        leaf_size = np.linspace(start=20, stop=50, num=1) if metrics else [20]
         minkowski_dist = [1]  # [1, 2, 3, 4]
         model_params_array = map(
             lambda x: {
@@ -88,10 +95,10 @@ def make_fst_layer_model_params(eModel, model_prefix=None):
         return model_params_array
 
 
-def make_snd_layer_model_params(eModel, model_prefix=None):
+def make_snd_layer_model_params(eModel, metrics, model_prefix=None):
     if eModel == ModelType.RandomForest:
-        n_est = [150]  # np.linspace(start=180, stop=250, num=7)
-        max_d = [10]  # np.linspace(10, 20, num=5)
+        n_est = np.linspace(start=180, stop=250, num=20) if metrics else [120]
+        max_d = np.linspace(10, 20, num=5) if metrics else [118]
         model_params_array = map(
             lambda x: {
                 'n_estimators': int(x[0]),
@@ -101,8 +108,8 @@ def make_snd_layer_model_params(eModel, model_prefix=None):
         return model_params_array
 
     if eModel == ModelType.XGBoost:
-        n_est = [150]  # np.linspace(start=180, stop=250, num=7)
-        max_d = [5]  # np.linspace(5, 20, num=5)
+        n_est = np.linspace(start=180, stop=250, num=20) if metrics else [120]
+        max_d = np.linspace(10, 20, num=5) if metrics else [118]
         # eta = learning_rate
         eta = [1.0]  # np.logspace(start=(-1.0), stop=0.0, base=10.0, num=5)
 
@@ -116,19 +123,17 @@ def make_snd_layer_model_params(eModel, model_prefix=None):
         return model_params_array
 
     if eModel == ModelType.NeuralNetwork:
-        num_layers = [1]  # np.linspace(start=1, stop=4, num=1)
-        layer_size_factor = [0.66]  # [0.33, 0.5, 0.66]
-        train_batch_size = [500]
+        num_layers = np.linspace(start=1, stop=4) if metrics else [1]
+        layer_size_factor = np.linspace(start=0.33, stop=1,
+                                        num=10) if metrics else [0.66]
+        # train_batch_size = [500]
         num_epoch = [25]
         model_params_array = map(
             lambda x: {
                 'num_layers': int(x[0]),
                 'size_factor': float(x[1]),
-                'train_batch_size': int(x[2]),
-                'num_epoch': int(x[3])
-            },
-            itertools.product(
-                *[num_layers, layer_size_factor, train_batch_size, num_epoch]))
+                'num_epoch': int(x[2])
+            }, itertools.product(*[num_layers, layer_size_factor, num_epoch]))
 
         return model_params_array
 
