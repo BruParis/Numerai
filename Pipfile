@@ -25,6 +25,7 @@ tables = "*"
 click = "*"
 setuptools = "*"
 aigovivo = {editable = true, path = "."}
+imblearn = "*"
 
 [requires]
 python_version = "3.8"

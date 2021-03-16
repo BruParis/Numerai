@@ -140,9 +140,10 @@ class NeuralNetwork(Model):
 
         # CHOICE epochs 20 ? 30 ?
 
-        num_eras = len(set(train_input.era.values))
+        num_eras = self.model_params['num_eras']
         tr_batch_size = int(
             len(train_input.index) / (ERA_NUM_BATCH * num_eras))
+
         self.model_params["train_batch_size"] = tr_batch_size
         print("model_params: ", self.model_params)
         if ERA_LABEL in train_input.columns:

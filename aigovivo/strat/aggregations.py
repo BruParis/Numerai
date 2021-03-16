@@ -39,7 +39,7 @@ class Aggregations():
                     m_c_found.add(eMode)
 
                     model_desc = cl_desc_m[model_name]
-                    cl_m_w = model_desc['train_eval']['train_score'][
+                    cl_m_w = model_desc['train_eval']['eval_score'][
                         'corr_mean']
                     if cl_m_w > 0:
                         m_c_w_sorted.append((cl, model_name, cl_m_w))

@@ -11,20 +11,24 @@ from sklearn.model_selection import train_test_split
 
 from ..common import *
 from ..threadpool import pool_map
-from ..reader import ReaderCSV
+from ..reader import ReaderCSV, load_h5_eras
 from ..strat import StratConstitution, Aggregations, make_aggr_dict
 from ..data_analysis import select_imp_ft
 from ..models import Model, ModelType, ModelGenerator, model_params
+from ..utils import get_eras
 
 
-def load_data(data_fp, cols=None):
-    file_reader = ReaderCSV(data_fp)
+def load_data(data_fp, eras, cols=None):
 
-    if cols is None:
-        data_df = file_reader.read_csv().set_index("id")
-    else:
-        cols = ['id'] + cols
-        data_df = file_reader.read_csv(columns=cols).set_index("id")
+    data_df = load_h5_eras(data_fp, eras, cols=cols)
+
+    # file_reader = ReaderCSV(data_fp)
+
+    # if cols is None:
+    #     data_df = file_reader.read_csv().set_index("id")
+    # else:
+    #     cols = ['id'] + cols
+    #     data_df = file_reader.read_csv(columns=cols).set_index("id")
 
     if 'data_type' in data_df.columns:
         data_df = data_df.drop(['data_type'], axis=1)
@@ -42,6 +46,7 @@ def make_model_prefix(eModel):
 def build_eval_model(train_input,
                      train_target,
                      full_train_data,
+                     valid_data,
                      model_gen,
                      cl_cols,
                      r_s,
@@ -52,9 +57,10 @@ def build_eval_model(train_input,
                                       train_target,
                                       random_search=r_s)
 
-        print(" === evaluate model ===")
-        print("full_train_data: ", full_train_data)
+        print(" === train evaluate model ===")
         train_eval = model_gen.evaluate_model(cl_cols, full_train_data)
+        print(" === valid evaluate model ===")
+        valid_eval = model_gen.evaluate_model(cl_cols, valid_data)
     else:
         print("     -> use important features")
         print("     -> new_fts: ", new_fts)
@@ -65,12 +71,14 @@ def build_eval_model(train_input,
                                       train_target,
                                       random_search=r_s)
 
-        print(" === evaluate model ===")
+        print(" === train evaluate model ===")
         new_cols = ['era'] + new_fts + ['target']
         train_eval = model_gen.evaluate_model(new_cols, full_train_data)
+        print(" === valid evaluate model ===")
+        valid_eval = model_gen.evaluate_model(new_cols, valid_data)
 
     print("train_eval: ", train_eval)
-    return model, train_eval
+    return model, train_eval, valid_eval
 
 
 def cl_model_build(dirname,
@@ -96,7 +104,11 @@ def cl_model_build(dirname,
 
     cl_fts = cl_dict['selected_features'].split('|')
     cl_cols = ['era'] + cl_fts + ['target']
-    full_train_data = load_data(TRAINING_DATA_FP, cols=cl_cols)
+    train_eras = get_eras('training')
+    full_train_data = load_data(TRAINING_STORE_H5_FP, train_eras, cols=cl_cols)
+
+    valid_eras = get_eras('validation')
+    valid_data = load_data(TOURNAMENT_STORE_H5_FP, valid_eras, cols=cl_cols)
 
     # Need to reorder ft col by selected_features in model description
     full_train_data = full_train_data[cl_cols]
@@ -127,7 +139,7 @@ def cl_model_build(dirname,
         # K_NN not used for now
         #for model_prefix in make_model_prefix(model_type):
         model_prefix = None
-        model_gen.start_model_type(model_type, model_prefix, bMetrics)
+        model_gen.start_model_type(model_type, model_prefix)
 
         model_params_array = [orig_m_d['best_params']
                               ] if b_p else model_params(
@@ -135,6 +147,7 @@ def cl_model_build(dirname,
 
         best_ll = sys.float_info.max
         for m_params in model_params_array:
+            m_params['num_eras'] = len(cl_eras)  # keep num eras info for model
 
             model_dict = dict()
 
@@ -149,34 +162,39 @@ def cl_model_build(dirname,
             model_gen.generate_model(m_params, model_debug)
 
             print(" === build model ===")
-            model, train_eval = build_eval_model(train_input,
-                                                 train_target,
-                                                 full_train_data,
-                                                 model_gen,
-                                                 cl_cols,
-                                                 r_s,
-                                                 b_p,
-                                                 new_fts=new_fts)
+            model, train_eval, valid_eval = build_eval_model(train_input,
+                                                             train_target,
+                                                             full_train_data,
+                                                             valid_data,
+                                                             model_gen,
+                                                             cl_cols,
+                                                             r_s,
+                                                             b_p,
+                                                             new_fts=new_fts)
+            if bMetrics:
+                model_gen.append_metrics(valid_eval)
 
             if bFtImp:
                 print(" === features importance selection ===")
                 ft_sel = cl_fts if not b_p or new_fts is None else new_fts
                 new_fts = select_imp_ft(full_train_data, model_type, ft_sel,
-                                        model, train_eval['train_score'])
+                                        model, train_eval['eval_score'])
 
                 print("     --> new_fts: ", new_fts)
 
                 print(" === snd build model ===")
-                model_2, train_eval_2 = build_eval_model(train_input,
-                                                         train_target,
-                                                         full_train_data,
-                                                         model_gen,
-                                                         cl_cols,
-                                                         r_s,
-                                                         b_p,
-                                                         new_fts=new_fts)
+                model_2, train_eval_2, valid_eval_2 = build_eval_model(
+                    train_input,
+                    train_target,
+                    full_train_data,
+                    valid_data,
+                    model_gen,
+                    cl_cols,
+                    r_s,
+                    b_p,
+                    new_fts=new_fts)
 
-                if train_eval_2['log_loss'] < train_eval['log_loss']:
+                if valid_eval_2['log_loss'] < valid_eval_2['log_loss']:
                     model = model_2
 
             log_loss = train_eval['log_loss']
@@ -186,6 +204,8 @@ def cl_model_build(dirname,
                 # model_dict['test_eval'] = test_eval
                 model_dict[
                     'train_eval'] = train_eval_2 if bFtImp else train_eval
+                model_dict[
+                    'valid_eval'] = valid_eval_2 if bFtImp else valid_eval
                 if bFtImp:
                     model_dict['train_eval_cl_ft'] = train_eval
                 model_dict['model_filepath'] = filepath
@@ -264,14 +284,21 @@ def snd_layer_model_build(aggr_dict,
 
     model_aggr_dict = dict()
 
+    train_eras = get_eras('training')
+    valid_eras = get_eras('validation')
+
     for aggr_id, aggr_const in aggr_dict.items():
 
         input_cols = [
             cl + '_' + m for cl, m, _ in aggr_const['cluster_models']
         ]
         data_cols = ['id', 'era', TARGET_LABEL] + input_cols
-        f_train_target_data = load_data(train_data_fp, cols=data_cols)
-        f_valid_target_data = load_data(valid_data_fp, cols=data_cols)
+        f_train_target_data = load_data(train_data_fp,
+                                        train_eras,
+                                        cols=data_cols)
+        f_valid_target_data = load_data(valid_data_fp,
+                                        valid_eras,
+                                        cols=data_cols)
 
         train_data, test_data = train_test_split(f_train_target_data,
                                                  test_size=TEST_RATIO)
@@ -289,8 +316,7 @@ def snd_layer_model_build(aggr_dict,
         for model_type in model_types:
             for model_prefix in make_model_prefix(model_type):
 
-                model_generator.start_model_type(model_type, model_prefix,
-                                                 bMetrics)
+                model_generator.start_model_type(model_type, model_prefix)
 
                 model_params_array = model_params('snd', model_type, bMetrics,
                                                   model_prefix)

@@ -44,8 +44,8 @@ def make_fst_layer_model_params(eModel, metrics, model_prefix=None):
         return model_params_array
 
     if eModel == ModelType.XGBoost:
-        n_est = np.linspace(start=180, stop=250, num=10) if metrics else [75]
-        max_d = np.linspace(10, 20, num=5) if metrics else [50]
+        n_est = np.linspace(start=180, stop=250, num=10) if metrics else [120]
+        max_d = np.linspace(10, 20, num=5) if metrics else [118]
         # eta = learning_rate
         eta = np.logspace(start=(-1.0), stop=0.0, base=10.0,
                           num=5) if metrics else [1.0]
@@ -61,14 +61,14 @@ def make_fst_layer_model_params(eModel, metrics, model_prefix=None):
         return model_params_array
 
     if eModel == ModelType.NeuralNetwork:
-        num_layers = range(1, 4) if metrics else [1]
-        layer_size_factor = np.linspace(start=0.5, stop=1,
-                                        num=5) if metrics else [0.66]
+        num_layers = range(1, 3) if metrics else [1]
+        layer_size_factor = np.linspace(start=0.33, stop=1,
+                                        num=5) if metrics else [1]
         # train_batch_size = np.linspace(start=10, stop=100, num=4)  if metrics else [100]
         func_activation = ['sigmoid', 'relu', 'softmax'
-                           ] if metrics else ['softmax']
+                           ] if metrics else ['sigmoid']
         # use gelu isteand of relu ?
-        num_epoch = [150]
+        num_epoch = [100]
 
         model_params_array = map(
             lambda x: {
