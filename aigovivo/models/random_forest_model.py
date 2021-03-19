@@ -81,15 +81,13 @@ class RFModel(Model):
             cv_strat = cv_k_folds_by_era(train_input, num_folds=NUM_FOLDS)
 
             random_grid = self._create_random_grid()
-            clf_random = RandomizedSearchCV(
-                estimator=self.model,
-                param_distributions=random_grid,
-                n_iter=15,
-                cv=cv_strat,
-                # cv=5,
-                verbose=1,
-                random_state=42,
-                n_jobs=-1)
+            clf_random = RandomizedSearchCV(estimator=self.model,
+                                            param_distributions=random_grid,
+                                            n_iter=15,
+                                            cv=cv_strat,
+                                            verbose=1,
+                                            random_state=42,
+                                            n_jobs=-1)
 
             if ERA_LABEL in train_input.columns:
                 train_input = train_input.drop([ERA_LABEL], axis=1)

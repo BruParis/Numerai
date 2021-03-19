@@ -99,15 +99,17 @@ class NeuralNetwork(Model):
         self.history = None
 
     def _generate_target_labels(self, target_df):
+        # target_df reference data that can be used by other models
+        target_nn_df = target_df.copy()
         for v in TARGET_VALUES:
-            target_df[v] = target_df.apply(
+            target_nn_df[v] = target_nn_df.apply(
                 lambda x: 1.0
                 if x[("target")] == v * TARGET_FACT_NUMERIC else 0.0,
                 axis=1,
             )
-        print("target_df: ", target_df)
+        print("target_nn_df: ", target_nn_df)
 
-        train_t_labels = target_df.loc[:, TARGET_VALUES]
+        train_t_labels = target_nn_df.loc[:, TARGET_VALUES]
 
         return train_t_labels
 

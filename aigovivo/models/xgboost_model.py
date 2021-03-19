@@ -20,22 +20,17 @@ class XGBModel(Model):
     def _create_random_grid(self):
 
         # Number of trees in random forest
-        #n_estimators = [int(x) for x in np.linspace(start=200, stop=2000, num=10)]
         n_estimators = [int(x) for x in np.linspace(start=60, stop=120, num=5)]
         # Number of features to consider at every split
-        #max_features = ['auto', 'sqrt']
         max_features = ['sqrt']
         # Maximum number of levels in tree
         max_depth = [int(x) for x in np.linspace(70, 130, num=6)]
         max_depth.append(None)
         # Minimum number of samples required to split a node
-        # min_samples_split = [2, 5, 10]
         min_samples_split = [5]
         # Minimum number of samples required at each leaf node
-        # min_samples_leaf = [1, 2, 4]
         min_samples_leaf = [1]
         # Method of selecting samples for training each tree
-        # bootstrap = [True, False]
         bootstrap = [False]
         # Create the random grid
         random_grid = {
@@ -65,14 +60,13 @@ class XGBModel(Model):
         # objective='multi:softprob',
         self.model = xgb.XGBClassifier(
             objective='binary:logisitc',
-            #tree_method='gpu_hist',
+            tree_method='hist',
             eval_metric='mlogloss',
             num_class=len(TARGET_CLASSES),
             n_estimators=self.model_params['n_estimators'],
             max_depth=self.model_params['max_depth'],
             learning_rate=self.model_params['learning_rate'],
             booster='gbtree',
-            scale_pos_weight=SCALE_POS_WEIGHT,
             use_label_encoder=False,
             n_jobs=-1)
 

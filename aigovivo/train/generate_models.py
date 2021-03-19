@@ -300,9 +300,10 @@ def snd_layer_model_build(aggr_dict,
                                         valid_eras,
                                         cols=data_cols)
 
-        train_data, test_data = train_test_split(f_train_target_data,
-                                                 test_size=TEST_RATIO)
-        test_data['era'] = train_data['era']
+        # train_data, test_data = train_test_split(f_train_target_data,
+        #                                         test_size=TEST_RATIO)
+        # test_data['era'] = train_data['era']
+        train_data = f_train_target_data
 
         model_generator = ModelGenerator(snd_layer_dirpath)
         train_input, train_target = model_generator.format_train_data(

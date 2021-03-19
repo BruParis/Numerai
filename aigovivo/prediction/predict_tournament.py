@@ -305,6 +305,8 @@ def make_prediction(strat_dir, layer, model_types):
     strat_c.load()
 
     aggr_dict = load_json(model_aggr_fp)
+    aggr_m_key = ",".join([m.name for m in model_types])
+    aggr_m_dict = aggr_dict[aggr_m_key]
 
     start_time = time.time()
 
@@ -318,7 +320,7 @@ def make_prediction(strat_dir, layer, model_types):
         ]
         data_types_files = list(
             zip(PREDICTION_TYPES, predictions_fst_fp, proba_cl_fn))
-        make_prediction_fst(strat_dir, strat_c, model_types, aggr_dict,
+        make_prediction_fst(strat_dir, strat_c, model_types, aggr_m_dict,
                             data_types_files)
 
     if layer == 'snd':
