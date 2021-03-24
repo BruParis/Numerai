@@ -236,11 +236,14 @@ def exec(threadpool, pred, layer, cluster, models, folder):
         neutralize_pred(folder, model_types)
 
 
-@cli.command('opt')
+@cli.command('optim')
+@click.argument('models', default="nn")
 @click.argument('aggr', default="nn")
 @click.argument('folder', type=click.Path(exists=True))
-def exec(aggr, folder):
-    optimize_aggr(folder, aggr)
+def optim(models, aggr, folder):
+    model_types = models_from_arg(models)
+
+    optimize_aggr(folder, model_types, aggr)
 
 
 @cli.command('compute')
