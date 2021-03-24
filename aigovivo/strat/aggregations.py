@@ -3,6 +3,8 @@ import itertools
 
 from ..common import *
 
+from ..models import ModelDescription
+
 from .strat_constitution import StratConstitution
 
 
@@ -11,7 +13,7 @@ class Aggregations():
         self.filepath = filepath
         self.aggr_dict = None
 
-    def _gen_aggr_dict(self, cl_dict):
+    def _gen_aggr_dict(self, layer, cl_dict):
 
         model_types = [
             ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
@@ -28,19 +30,22 @@ class Aggregations():
             m_c_w_sorted = []
             m_c_found = set()
 
-            for eMode in m_c:
-                model_name = eMode.name
+            for eModel in m_c:
+                model_name = eModel.name
                 for cl, cl_desc in cl_dict.items():
 
                     cl_desc_m = cl_desc['models']
                     if model_name not in cl_desc_m.keys():
                         continue
 
-                    m_c_found.add(eMode)
+                    m_c_found.add(eModel)
 
-                    model_desc = cl_desc_m[model_name]
-                    cl_m_w = model_desc['train_eval']['eval_score'][
-                        'corr_mean']
+                    model_fp = cl_desc_m[model_name]
+                    print("model_fp: ", model_fp)
+                    model_desc = ModelDescription(layer, model_fp, eModel)
+                    model_desc.load()
+
+                    cl_m_w = model_desc.valid_eval['eval_score']['corr_mean']
                     if cl_m_w > 0:
                         m_c_w_sorted.append((cl, model_name, cl_m_w))
 
@@ -82,7 +87,7 @@ class Aggregations():
             self.aggr_dict = json.load(fp)
 
 
-def make_aggr_dict(folder):
+def make_aggr_dict(layer, folder):
 
     strat_c_fp = folder + '/' + STRAT_CONSTITUTION_FILENAME
     strat_c = StratConstitution(strat_c_fp)
@@ -92,7 +97,7 @@ def make_aggr_dict(folder):
 
     model_a_filepath = folder + '/' + MODEL_AGGREGATION_FILENAME
     aggr_dict = Aggregations(model_a_filepath)
-    aggr_dict._gen_aggr_dict(cl_dict)
+    aggr_dict._gen_aggr_dict(layer, cl_dict)
     aggr_dict.save()
 
     return

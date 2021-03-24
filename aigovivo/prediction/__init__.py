@@ -5,3 +5,5 @@ from .produce_proba import *
 from .upload_results import *
 from .generate_snd_layer_training_data import *
 from .compute_predict import compute_predict
+from .pred_diagnostics import *
+from .optimize_aggr import *

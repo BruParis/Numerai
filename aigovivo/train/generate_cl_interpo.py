@@ -4,12 +4,14 @@ import errno
 
 from ..strat import StratConstitution
 from ..common import *
-from ..models import ModelGenerator, Model, ModelType, interpo_params
+from ..models import Model, ModelType, interpo_params
+
+from .model_generator import ModelGenerator
 
 CL_INTERPO_FP = 'interpo_fp.json'
 
 
-def load_valid_cl_data():
+def load_valid_cl_data(data_fp, eras, cols=None):
     return None
 
 

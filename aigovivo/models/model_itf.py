@@ -81,3 +81,22 @@ def get_metrics_filename(eModel, model_prefix=None):
     if eModel == ModelType.UnivPolyInterpo:
         filename = str(model_prefix) + '_metrics.csv'
         return filename
+
+
+def get_desc_filename(eModel, model_prefix=None):
+    if eModel == ModelType.RandomForest:
+        return 'rf_desc.json'
+
+    if eModel == ModelType.XGBoost:
+        return 'xgb_desc.json'
+
+    if eModel == ModelType.NeuralNetwork:
+        return 'nn_desc.json'
+
+    if eModel == ModelType.K_NN:
+        filename = str(model_prefix) + '_nn_desc.json'
+        return filename
+
+    if eModel == ModelType.UnivPolyInterpo:
+        filename = str(model_prefix) + '_univpolyinterpo.csv'
+        return filename

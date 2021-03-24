@@ -12,10 +12,12 @@ from sklearn.model_selection import train_test_split
 from ..common import *
 from ..threadpool import pool_map
 from ..reader import ReaderCSV, load_h5_eras
-from ..strat import StratConstitution, Aggregations, make_aggr_dict
+from ..strat import StratConstitution, Aggregations
 from ..data_analysis import select_imp_ft
-from ..models import Model, ModelType, ModelGenerator, model_params
+from ..models import Model, ModelType, model_params, ModelDescription
 from ..utils import get_eras
+
+from .model_generator import ModelGenerator
 
 
 def load_data(data_fp, eras, cols=None):
@@ -45,26 +47,25 @@ def make_model_prefix(eModel):
 
 def build_eval_model(train_input,
                      train_target,
-                     full_train_data,
+                     full_t_data,
                      valid_data,
                      model_gen,
                      cl_cols,
                      r_s,
-                     b_p,
-                     new_fts=None):
-    if not b_p and new_fts is None:
+                     imp_fts=None):
+    if imp_fts is None:
         model = model_gen.build_model(train_input,
                                       train_target,
                                       random_search=r_s)
 
         print(" === train evaluate model ===")
-        train_eval = model_gen.evaluate_model(cl_cols, full_train_data)
+        train_eval = model_gen.evaluate_model(cl_cols, full_t_data)
         print(" === valid evaluate model ===")
         valid_eval = model_gen.evaluate_model(cl_cols, valid_data)
     else:
         print("     -> use important features")
-        print("     -> new_fts: ", new_fts)
-        new_cols = ['era'] + new_fts
+        print("     -> imp_fts: ", imp_fts)
+        new_cols = ['era'] + imp_fts
         train_ft_filter = train_input[new_cols]
 
         model = model_gen.build_model(train_ft_filter,
@@ -72,8 +73,8 @@ def build_eval_model(train_input,
                                       random_search=r_s)
 
         print(" === train evaluate model ===")
-        new_cols = ['era'] + new_fts + ['target']
-        train_eval = model_gen.evaluate_model(new_cols, full_train_data)
+        new_cols = ['era'] + imp_fts + ['target']
+        train_eval = model_gen.evaluate_model(new_cols, full_t_data)
         print(" === valid evaluate model ===")
         valid_eval = model_gen.evaluate_model(new_cols, valid_data)
 
@@ -81,8 +82,78 @@ def build_eval_model(train_input,
     return model, train_eval, valid_eval
 
 
-def cl_model_build(dirname,
-                   cl,
+def cl_model_random_search():
+    return
+
+
+def cl_model_standard_build(cl_dirpath,
+                            cl_dict,
+                            model_types,
+                            bSaveModel=False,
+                            bDebug=False):
+    print("build model cluster: ", cl_dirpath)
+
+    cl_eras = cl_dict['eras_name']
+
+    # TODO : case when training on all features ?
+    #     cl_fts = cl_dict['selected_features'].split('|')
+
+    cl_fts = cl_dict['selected_features'].split('|')
+    cl_cols = ['era'] + cl_fts + ['target']
+    train_eras = get_eras('training')
+    full_t_data = load_data(TRAINING_STORE_H5_FP, train_eras, cols=cl_cols)
+
+    valid_eras = get_eras('validation')
+    valid_data = load_data(TOURNAMENT_STORE_H5_FP, valid_eras, cols=cl_cols)
+
+    # Need to reorder ft col by selected_features in cluster description
+    full_t_data = full_t_data[cl_cols]
+    train_data = full_t_data.loc[full_t_data['era'].isin(cl_eras)]
+
+    model_gen = ModelGenerator(cl_dirpath)
+    train_input, train_target = model_gen.format_train_data(train_data)
+
+    cl_m = cl_dict['models']
+
+    for eModel in model_types:
+        model_desc_fp = cl_m[eModel.name]
+        model_desc = ModelDescription('fst', model_desc_fp, eModel)
+        model_desc.load()
+
+        model_gen.start_model_type(eModel, None)
+
+        m_params = model_desc.train_params
+
+        print("model_params: ", m_params)
+
+        m_params['num_eras'] = len(cl_eras)  # keep num eras info for model
+
+        model_gen.generate_model(m_params, bDebug)
+
+        model, t_eval, v_eval = build_eval_model(train_input,
+                                                 train_target,
+                                                 full_t_data,
+                                                 valid_data,
+                                                 model_gen,
+                                                 cl_cols,
+                                                 False,
+                                                 imp_fts=None)
+
+        if bSaveModel:
+            m_fp, config_fp = model.save_model()
+
+            model_desc.train_eval = t_eval
+            model_desc.valid_eval = v_eval
+
+            model_desc.model_fp = m_fp
+            model_desc.config_fp = config_fp
+            model_desc.train_params = m_params
+            model_desc.save()
+
+    return
+
+
+def cl_model_build(cl_dirpath,
                    cl_dict,
                    model_types,
                    r_s,
@@ -91,29 +162,28 @@ def cl_model_build(dirname,
                    bSaveModel=False,
                    bMetrics=False,
                    model_debug=False):
-    print("build model cluster: ", cl)
+    print("build model cluster: ", cl_dirpath)
     print("r_s: ", r_s)
 
-    cl_dirpath = dirname + '/' + cl
     cl_eras = cl_dict['eras_name']
 
     # TODO : case when no selected_features
-    # full_train_data = load_data(TRAINING_DATA_FP)
-    # cl_fts = [x for x in full_train_data.columns if x.startswith('feature_')]
+    # full_t_data = load_data(TRAINING_DATA_FP)
+    # cl_fts = [x for x in full_t_data.columns if x.startswith('feature_')]
     # cl_cols = ['era'] + cl_fts + ['target']
 
     cl_fts = cl_dict['selected_features'].split('|')
     cl_cols = ['era'] + cl_fts + ['target']
     train_eras = get_eras('training')
-    full_train_data = load_data(TRAINING_STORE_H5_FP, train_eras, cols=cl_cols)
+    full_t_data = load_data(TRAINING_STORE_H5_FP, train_eras, cols=cl_cols)
 
     valid_eras = get_eras('validation')
     valid_data = load_data(TOURNAMENT_STORE_H5_FP, valid_eras, cols=cl_cols)
 
     # Need to reorder ft col by selected_features in model description
-    full_train_data = full_train_data[cl_cols]
+    full_t_data = full_t_data[cl_cols]
 
-    train_data = full_train_data.loc[full_train_data['era'].isin(cl_eras)]
+    train_data = full_t_data.loc[full_t_data['era'].isin(cl_eras)]
 
     print('model_types: ', model_types)
 
@@ -151,48 +221,46 @@ def cl_model_build(dirname,
 
             model_dict = dict()
 
-            new_fts = None
+            imp_fts = None
             has_imp_fts = not no_m_d and 'imp_fts' in orig_m_d.keys()
             if has_imp_fts:
                 print("orig_m_d['imp_fts']: ", orig_m_d['imp_fts'])
                 orig_imp_fts = orig_m_d['imp_fts']
                 if orig_imp_fts is not None:
-                    new_fts = orig_imp_fts.split('|')
+                    imp_fts = orig_imp_fts.split('|')
 
             model_gen.generate_model(m_params, model_debug)
 
             print(" === build model ===")
             model, train_eval, valid_eval = build_eval_model(train_input,
                                                              train_target,
-                                                             full_train_data,
+                                                             full_t_data,
                                                              valid_data,
                                                              model_gen,
                                                              cl_cols,
                                                              r_s,
-                                                             b_p,
-                                                             new_fts=new_fts)
+                                                             imp_fts=imp_fts)
             if bMetrics:
                 model_gen.append_metrics(valid_eval)
 
             if bFtImp:
                 print(" === features importance selection ===")
-                ft_sel = cl_fts if not b_p or new_fts is None else new_fts
-                new_fts = select_imp_ft(full_train_data, model_type, ft_sel,
-                                        model, train_eval['eval_score'])
+                ft_sel = cl_fts if not b_p or imp_fts is None else imp_fts
+                imp_fts = select_imp_ft(full_t_data, model_type, ft_sel, model,
+                                        train_eval['eval_score'])
 
-                print("     --> new_fts: ", new_fts)
+                print("     --> imp_fts: ", imp_fts)
 
                 print(" === snd build model ===")
                 model_2, train_eval_2, valid_eval_2 = build_eval_model(
                     train_input,
                     train_target,
-                    full_train_data,
+                    full_t_data,
                     valid_data,
                     model_gen,
                     cl_cols,
                     r_s,
-                    b_p,
-                    new_fts=new_fts)
+                    imp_fts=imp_fts)
 
                 if valid_eval_2['log_loss'] < valid_eval_2['log_loss']:
                     model = model_2
@@ -210,7 +278,7 @@ def cl_model_build(dirname,
                     model_dict['train_eval_cl_ft'] = train_eval
                 model_dict['model_filepath'] = filepath
                 model_dict['config_filepath'] = configpath
-                model_dict['imp_fts'] = '|'.join(new_fts) if bFtImp else None
+                model_dict['imp_fts'] = '|'.join(imp_fts) if bFtImp else None
                 model_dict['params'] = model.model_params
                 if r_s:
                     model_dict['best_params'] = model.model_params
@@ -218,7 +286,7 @@ def cl_model_build(dirname,
                 cl_dict['models'][model_type.name] = model_dict
 
 
-def generate_cl_model(dirname, cl, models, r_s, b_p, bFtImp, bDebug, bMetrics,
+def generate_cl_model(dirname, cl, models, r_s, bFtImp, bDebug, bMetrics,
                       bSaveModel):
 
     strat_c_fp = dirname + '/' + STRAT_CONSTITUTION_FILENAME
@@ -227,40 +295,58 @@ def generate_cl_model(dirname, cl, models, r_s, b_p, bFtImp, bDebug, bMetrics,
 
     cl_dict = strat_c.clusters[cl]
 
-    cl_model_build(dirname, cl, cl_dict, models, r_s, b_p, bFtImp, bSaveModel,
-                   bMetrics, bDebug)
+    cl_dirpath = dirname + '/' + cl
+
+    if bFtImp:
+        return
+    elif bMetrics:
+        return
+    elif r_s:
+        return
+    else:
+        cl_model_standard_build(cl_dirpath, cl_dict, models, bSaveModel,
+                                bDebug)
 
     if bSaveModel:
         print("strat_c_fp: ", strat_c_fp)
         strat_c.save()
 
 
-def generate_fst_layer_model(dirname, models, r_s, b_p, bFtImp, bDebug,
-                             bMetrics, bSaveModel, bMultiProc):
+def generate_fst_layer_model(dirname, models, r_s, bFtImp, bDebug, bMetrics,
+                             bSaveModel):
     strat_c_fp = dirname + '/' + STRAT_CONSTITUTION_FILENAME
     strat_c = StratConstitution(strat_c_fp)
     strat_c.load()
 
-    cl_dict = strat_c.clusters
+    strat_clusters = strat_c.clusters
 
     start_time = time.time()
 
     # Seems there is a pb with multiprocess (mult. proc w/ same dataframe?)
-    if bMultiProc:
-        models_build_arg = list(
-            zip(itertools.repeat(dirname), cl_dict.items(),
-                itertools.repeat(bMetrics), itertools.repeat(bDebug)))
-        cl_dir_model_l = pool_map(cl_model_build,
-                                  models_build_arg,
-                                  collect=True,
-                                  arg_tuple=True)
+    # if bMultiProc:
+    #     models_build_arg = list(
+    #         zip(itertools.repeat(dirname), cl_dict.items(),
+    #             itertools.repeat(bMetrics), itertools.repeat(bDebug)))
+    #     cl_dir_model_l = pool_map(cl_model_build,
+    #                               models_build_arg,
+    #                               collect=True,
+    #                               arg_tuple=True)
+    #     model_dict_l = dict(cl_dir_model_l)
+    # else:
+    for cl, cl_desc in strat_clusters.items():
 
-        model_dict_l = dict(cl_dir_model_l)
-    else:
-        for cl, cl_c in cl_dict.items():
-            cl_model_build(dirname, cl, cl_c, models, r_s, b_p, bFtImp,
-                           bSaveModel, bMetrics, bDebug)
-            continue
+        cl_dirpath = dirname + '/' + cl
+
+        if bFtImp:
+            return
+        elif bMetrics:
+            return
+        elif r_s:
+            return
+        else:
+            cl_model_standard_build(cl_dirpath, cl_desc, models, bSaveModel,
+                                    bDebug)
+        continue
 
     print("model building done")
     print("--- %s seconds ---" % (time.time() - start_time))
@@ -270,7 +356,7 @@ def generate_fst_layer_model(dirname, models, r_s, b_p, bFtImp, bDebug,
 
         strat_c.save()
 
-        make_aggr_dict(dirname)
+        # make_aggr_dict(dirname)
 
 
 def snd_layer_model_build(aggr_dict,

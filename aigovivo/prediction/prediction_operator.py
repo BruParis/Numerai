@@ -4,7 +4,7 @@ import itertools
 import numpy as np
 import pandas as pd
 
-from ..models import load_model
+from ..models import load_model, ModelDescription
 from ..threadpool import pool_map
 from ..reader import ReaderCSV
 from ..common import *
@@ -48,7 +48,7 @@ class PredictionOperator():
 
         return prediction_proba_df
 
-    def _model_proba(self, input_data, cluster, eModel, model_desc):
+    def _model_proba(self, input_data, cluster, eModel, model_fp):
         cl_ft = cluster['selected_features'].split('|')
         input_data_ft = input_data[cl_ft]
         # input_target = input_data[TARGET_LABEL]
@@ -58,7 +58,6 @@ class PredictionOperator():
             models_proba_full[col].values[:] = 0.0
 
         prefix = None  #model_desc['prefix']
-        model_fp = model_desc['model_filepath']
 
         pred_proba = self._model_predict_proba(model_fp, eModel, prefix,
                                                input_data_ft)
@@ -68,15 +67,19 @@ class PredictionOperator():
     def _make_cl_proba_dict(self, input_data, cl_dict):
 
         cl_all_models_proba = {}
-        for model, model_desc in cl_dict['models'].items():
+        for model, model_d_fp in cl_dict['models'].items():
 
             eModel = ModelType[model]
 
             if not (eModel in self.model_types):
                 continue
 
+            model_desc = ModelDescription('fst', model_d_fp, eModel)
+            model_desc.load()
+            model_fp = model_desc.model_fp
+
             cl_model_proba = self._model_proba(input_data, cl_dict, eModel,
-                                               model_desc)
+                                               model_fp)
 
             cl_all_models_proba[eModel.name] = cl_model_proba
 

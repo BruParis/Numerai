@@ -1,11 +1,12 @@
 import click
 
-from .data_analysis import generate_cross_corr, ft_selection, pred_diagnostics, cl_pred_diagnostics, model_ft_imp
+from .data_analysis import generate_cross_corr, ft_selection, model_ft_imp
 from .strat import make_new_strat, make_aggr_dict
 from .clustering import clustering, simple_era_clustering
 from .format_data import data_setup, split_data_clusters
-from .prediction import make_prediction, cluster_proba, neutralize_pred, upload_results, compute_predict
+from .prediction import make_prediction, cluster_proba, neutralize_pred, upload_results, compute_predict, cl_pred_diagnostics, pred_diagnostics, optimize_aggr
 from .train import generate_cl_interpo, generate_cl_model, generate_fst_layer_model, generate_snd_layer_model
+from .models import generate_model_dict
 from .common import *
 
 
@@ -65,6 +66,17 @@ def cl(folder):
     split_data_clusters(folder)
 
 
+@cli.command('model')
+@click.option("-l",
+              "--layer",
+              type=click.Choice(LAYERS, case_sensitive=False),
+              default="fst",
+              prompt=True)
+@click.argument('folder', type=click.Path(exists=True))
+def model(layer, folder):
+    generate_model_dict(folder, layer)
+
+
 # TODO : move interpo to train ?
 # @cli.command('interpo')
 # @click.option("-d", "--debug", default=False, show_default=True, is_flag=True)
@@ -102,16 +114,6 @@ def cl(folder):
               default=False,
               show_default=True,
               is_flag=True)
-@click.option("-bp",
-              "--best-params",
-              default=False,
-              show_default=True,
-              is_flag=True)
-@click.option("-t",
-              "--threadpool",
-              default=False,
-              show_default=True,
-              is_flag=True)
 @click.option("-l",
               "--layer",
               type=click.Choice(LAYERS, case_sensitive=False),
@@ -120,8 +122,8 @@ def cl(folder):
 @click.option("-c", "--cluster", default=None, show_default=True)
 @click.argument('models', default="nn")
 @click.argument('folder', type=click.Path(exists=True))
-def train(debug, metrics, no_save, ft_imp, random_search, best_params,
-          threadpool, layer, cluster, models, folder):
+def train(debug, metrics, no_save, ft_imp, random_search, layer, cluster,
+          models, folder):
 
     model_types = models_from_arg(models)
     print('model_types: ', model_types)
@@ -131,24 +133,28 @@ def train(debug, metrics, no_save, ft_imp, random_search, best_params,
         if cluster is None:
             print("cluster name not provided")
             return
-        generate_cl_model(folder, cluster, model_types, random_search,
-                          best_params, ft_imp, debug, metrics, save)
+        generate_cl_model(folder, cluster, model_types, random_search, ft_imp,
+                          debug, metrics, save)
         return
     if cluster is not None:
         print("specifying a cluster is unecessary when training a layer")
 
     if layer == 'fst':
-        generate_fst_layer_model(folder, model_types, random_search,
-                                 best_params, ft_imp, debug, metrics, save,
-                                 threadpool)
+        generate_fst_layer_model(folder, model_types, random_search, ft_imp,
+                                 debug, metrics, save)
     if layer == 'snd':
         generate_snd_layer_model(folder, model_types, debug, metrics, save)
 
 
 @cli.command('aggr')
+@click.option("-l",
+              "--layer",
+              type=click.Choice(LAYERS, case_sensitive=False),
+              default="fst",
+              prompt=True)
 @click.argument('folder', type=click.Path(exists=True))
-def aggr(folder):
-    make_aggr_dict(folder)
+def aggr(layer, folder):
+    make_aggr_dict(layer, folder)
 
 
 @cli.command('mftimp')
@@ -228,6 +234,13 @@ def exec(threadpool, pred, layer, cluster, models, folder):
         make_prediction(folder, layer, model_types)
     elif pred == 'neutralize':
         neutralize_pred(folder, model_types)
+
+
+@cli.command('opt')
+@click.argument('aggr', default="nn")
+@click.argument('folder', type=click.Path(exists=True))
+def exec(aggr, folder):
+    optimize_aggr(folder, aggr)
 
 
 @cli.command('compute')

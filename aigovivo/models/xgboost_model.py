@@ -20,11 +20,13 @@ class XGBModel(Model):
     def _create_random_grid(self):
 
         # Number of trees in random forest
-        n_estimators = [int(x) for x in np.linspace(start=60, stop=120, num=5)]
+        n_estimators = [
+            int(x) for x in np.linspace(start=10, stop=120, num=15)
+        ]
         # Number of features to consider at every split
         max_features = ['sqrt']
         # Maximum number of levels in tree
-        max_depth = [int(x) for x in np.linspace(70, 130, num=6)]
+        max_depth = [int(x) for x in np.linspace(10, 30, num=6)]
         max_depth.append(None)
         # Minimum number of samples required to split a node
         min_samples_split = [5]
@@ -87,10 +89,10 @@ class XGBModel(Model):
             clf_random = RandomizedSearchCV(
                 estimator=self.model,
                 param_distributions=random_grid,
-                n_iter=15,
+                n_iter=100,
                 cv=cv_strat,
                 # cv=5,
-                verbose=1,
+                verbose=2,
                 random_state=42,
                 n_jobs=-1)
 

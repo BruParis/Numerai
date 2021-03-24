@@ -185,42 +185,6 @@ def make_prediction_fst(strat_dir, strat_c, model_types, aggr_dict,
             file_w_h[data_t] = False
 
 
-def make_compute_pred(strat_dir, aggr_desc, data_types_files):
-
-    aggr_l = {"16": aggr_desc}
-    print("aggr_l: ", aggr_l)
-
-    load_cl_m_dict = dict()
-    for cl, model, w in aggr_l['16']['cluster_models']:
-        if cl not in load_cl_m_dict.keys():
-            load_cl_m_dict[cl] = [model]
-        else:
-            load_cl_m_dict[cl].append(model)
-
-    file_w_h = {d_t: True for d_t, *_ in data_types_files}
-    for data_t, fpath, cl_fn in data_types_files:
-
-        rank_dict = {
-            cl: {model: pd.DataFrame()
-                 for model in cl_models}
-            for cl, cl_models in load_cl_m_dict.items()
-        }
-
-        for cl, model_n, _ in aggr_desc['cluster_models']:
-            cl_fp = strat_dir + '/' + cl + '/' + cl_fn
-            cl_rank = load_data(cl_fp, cols=['id', model_n])
-            rank_dict[cl][model_n] = cl_rank
-
-        rank_aggr_pred_dict = aggr_rank(rank_dict, aggr_l, data_t)
-
-        pred_eras = load_eras_data_type(data_t)
-        aggr_pred = pd.concat([pred_eras, rank_aggr_pred_dict["16"]], axis=1)
-
-        with open(fpath, 'w') as f:
-            aggr_pred.to_csv(f, header=file_w_h[data_t], index=True)
-            file_w_h[data_t] = False
-
-
 def make_prediction_snd(strat_dir, strat_c, aggr_dict, data_types_fp,
                         model_types):
     for data_type, fst_layer_fn, snd_layer_path in data_types_fp:

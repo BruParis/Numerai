@@ -4,7 +4,6 @@ import pandas as pd
 import sklearn.metrics as sm
 
 from abc import ABC, abstractmethod
-from ..data_analysis import rank_proba
 from ..common import *
 
 

@@ -6,8 +6,9 @@ from ..common import *
 from ..reader import ReaderCSV
 from ..strat import StratConstitution, Aggregations
 from ..utils import get_eras
-from ..data_analysis import rank_proba_models, rank_pred, neutralize, ft_exp_analysis
+from ..data_analysis import rank_proba_models, rank_pred, neutralize
 
+from .pred_diagnostics import ft_exp_analysis
 from .prediction_operator import PredictionOperator
 
 ERA_BATCH_SIZE = 32

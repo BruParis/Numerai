@@ -10,8 +10,7 @@ from imblearn.over_sampling import SMOTE, ADASYN
 
 from ..common import *
 from ..data_analysis import rank_proba, pred_score
-from .model_abstract import Model, ModelType
-from .model_itf import construct_model, get_metrics_filename
+from ..models import Model, ModelType, construct_model, get_metrics_filename
 
 
 class ModelGenerator():
