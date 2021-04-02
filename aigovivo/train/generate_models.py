@@ -153,6 +153,54 @@ def cl_model_standard_build(cl_dirpath,
     return
 
 
+def cl_model_metrics_build(cl_dirpath, cl_dict, model_types, bDebug=False):
+    print("build model cluster: ", cl_dirpath)
+
+    cl_eras = cl_dict['eras_name']
+
+    # TODO : case when training on all features ?
+    #     cl_fts = cl_dict['selected_features'].split('|')
+
+    cl_fts = cl_dict['selected_features'].split('|')
+    cl_cols = ['era'] + cl_fts + ['target']
+    train_eras = get_eras('training')
+    full_t_data = load_data(TRAINING_STORE_H5_FP, train_eras, cols=cl_cols)
+
+    valid_eras = get_eras('validation')
+    valid_data = load_data(TOURNAMENT_STORE_H5_FP, valid_eras, cols=cl_cols)
+
+    # Need to reorder ft col by selected_features in cluster description
+    full_t_data = full_t_data[cl_cols]
+    train_data = full_t_data.loc[full_t_data['era'].isin(cl_eras)]
+
+    model_gen = ModelGenerator(cl_dirpath)
+    train_input, train_target = model_gen.format_train_data(train_data)
+
+    for eModel in model_types:
+
+        model_gen.start_model_type(eModel)
+
+        model_params_array = model_params('fst', eModel, True)
+        for m_params in model_params_array:
+            m_params['num_eras'] = len(cl_eras)  # keep num eras info for model
+            print("model_params: ", m_params)
+
+            model_gen.generate_model(m_params, bDebug)
+
+            model, t_eval, v_eval = build_eval_model(train_input,
+                                                     train_target,
+                                                     full_t_data,
+                                                     valid_data,
+                                                     model_gen,
+                                                     cl_cols,
+                                                     False,
+                                                     imp_fts=None)
+
+            model_gen.append_metrics(v_eval)
+
+    return
+
+
 def cl_model_build(cl_dirpath,
                    cl_dict,
                    model_types,
@@ -300,6 +348,7 @@ def generate_cl_model(dirname, cl, models, r_s, bFtImp, bDebug, bMetrics,
     if bFtImp:
         return
     elif bMetrics:
+        cl_model_metrics_build(cl_dirpath, cl_dict, models, bDebug=bDebug)
         return
     elif r_s:
         return
@@ -333,18 +382,18 @@ def generate_fst_layer_model(dirname, models, r_s, bFtImp, bDebug, bMetrics,
     #                               arg_tuple=True)
     #     model_dict_l = dict(cl_dir_model_l)
     # else:
-    for cl, cl_desc in strat_clusters.items():
+    for cl, cl_dict in strat_clusters.items():
 
         cl_dirpath = dirname + '/' + cl
 
         if bFtImp:
             return
         elif bMetrics:
-            return
+            cl_model_metrics_build(cl_dirpath, cl_dict, models, bDebug=bDebug)
         elif r_s:
             return
         else:
-            cl_model_standard_build(cl_dirpath, cl_desc, models, bSaveModel,
+            cl_model_standard_build(cl_dirpath, cl_dict, models, bSaveModel,
                                     bDebug)
         continue
 

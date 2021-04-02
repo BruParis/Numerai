@@ -8,7 +8,7 @@ from ..strat import StratConstitution
 class ModelDescription():
     def _extract_from_dict(self, m_dict):
 
-        self.model_type = m_dict.get('model_type')
+        self.model_type = ModelType[m_dict.get('model_type')]
         self.model_fp = m_dict.get('model_fp')
         self.config_fp = m_dict.get('config_fp')
         self.train_pred_fp = m_dict.get('train_pred_fp')
@@ -23,7 +23,7 @@ class ModelDescription():
         model_dict = dict()
 
         if self.model_type is not None:
-            model_dict['model_type'] = self.model_type
+            model_dict['model_type'] = self.model_type.name
         if self.model_fp is not None:
             model_dict['model_fp'] = self.model_fp
         if self.config_fp is not None:

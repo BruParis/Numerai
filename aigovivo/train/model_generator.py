@@ -29,47 +29,6 @@ class ModelGenerator():
 
         return input_df, target_df
 
-    def _oversampling(self, train_data):
-        # TODO : balance classes
-        sampling_dict = {
-            t: len(train_data.loc[train_data[TARGET_LABEL] == t].index)
-            for t in TARGET_VALUES
-        }
-        print("sampling_dict: ", sampling_dict)
-        max_class = max(sampling_dict, key=sampling_dict.get)
-        print("max_class: ", max_class)
-        supp_fact_dict = {
-            k: (sampling_dict[max_class] - sampling_dict[k]) / sampling_dict[k]
-            for k, v in sampling_dict.items()
-        }
-        print("supp_fact_dict: ", supp_fact_dict)
-
-        supp_train_data = pd.DataFrame()
-        for t, supp_f in supp_fact_dict.items():
-            class_train_data = train_data.loc[train_data[TARGET_LABEL] == t]
-            supp_f_floor = int(supp_f)
-            supp_f_deci = supp_f - supp_f_floor
-
-            for _ in range(supp_f_floor):
-                supp_train_data = pd.concat(
-                    [supp_train_data, class_train_data], axis=0)
-
-            num_last_samples = int(supp_f_deci * len(class_train_data.index))
-            supp_train_data = pd.concat(
-                [supp_train_data,
-                 class_train_data.sample(num_last_samples)],
-                axis=0)
-
-        res = pd.concat([supp_train_data, train_data], axis=0)
-        res = res.groupby('era').sample(frac=1)
-        res_sampling_dict = {
-            t: len(res.loc[res[TARGET_LABEL] == t].index)
-            for t in TARGET_VALUES
-        }
-        print("res_sampling_dict: ", res_sampling_dict)
-
-        return res
-
     def _oversampling_2(self, train_data):
         print("train_data: ", train_data)
         ft_col = [c for c in train_data.columns if c.startswith('feature_')]
@@ -155,7 +114,6 @@ class ModelGenerator():
                                      model_debug=debug)
 
     def format_train_data(self, train_data):
-        # balanced_train_data = self._oversampling(train_data)
 
         balanced_train_data = self._oversampling_2(train_data)
 
