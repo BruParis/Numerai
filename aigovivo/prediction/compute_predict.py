@@ -85,8 +85,16 @@ def predict_era(folder, strat_c, era, compute_aggr_id, neutr_label, aggr_dict,
     era_full_pred_df = rank_pred(era_full_pred_df)
     era_full_pred_df.columns = [compute_aggr_id]
 
+    neutr_valid_col = [
+        ft for ft in input_data.columns if ft.startswith('feature')
+    ]
+    if 'sel_ft' in aggr_dict['optim_neutr'].keys():
+        neutr_valid_col = aggr_dict['optim_neutr']['sel_ft'].split('|')
+    neutr_valid_col += ['era', TARGET_LABEL]
+
     era_full_pred_df[neutr_label] = neutralize(
-        pd.concat([input_data, era_full_pred_df], axis=1), compute_aggr_id)
+        pd.concat([input_data[neutr_valid_col], era_full_pred_df], axis=1),
+        compute_aggr_id)
 
     era_full_pred_df = pd.concat(
         [input_data[['era', TARGET_LABEL]], era_full_pred_df], axis=1)
@@ -151,9 +159,12 @@ def compute_predict(layer, cluster, folder, model_types):
                 data_full_pred = pd.concat([data_full_pred, era_rank_target],
                                            axis=0)
 
+        print("data_full_pred: ", data_full_pred)
+
         # data_full_pred[neutr_label] = data_full_pred.groupby('era').apply(
         #     lambda x: neutralize(x, compute_aggr_id)).values
-        data_full_pred[neutr_label] = rank_pred(data_full_pred[neutr_label])
+        pred_label = neutr_label if strat_c.neutralize else compute_aggr_id
+        data_full_pred[pred_label] = rank_pred(data_full_pred[pred_label])
 
         print("data_full_pred: ", data_full_pred)
 
@@ -164,14 +175,11 @@ def compute_predict(layer, cluster, folder, model_types):
 
             valid_data = load_valid_data()
             valid_pred_data = pd.concat(
-                [valid_data, data_full_pred[[compute_aggr_id, neutr_label]]],
-                axis=1)
+                [valid_data, data_full_pred[[pred_label]]], axis=1)
 
             comp_diag_dict = dict()
-            comp_diag_dict[compute_aggr_id] = ft_exp_analysis(
-                valid_pred_data, eras_l, compute_aggr_id, pic_fp)
-            comp_diag_dict[neutr_label] = ft_exp_analysis(
-                valid_pred_data, eras_l, neutr_label, pic_fp)
+            comp_diag_dict[pred_label] = ft_exp_analysis(
+                valid_pred_data, eras_l, pred_label, pic_fp)
 
             comp_diag_fp = folder + '/compute_diag.json'
             with open(comp_diag_fp, 'w') as fp:

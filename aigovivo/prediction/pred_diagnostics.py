@@ -6,7 +6,7 @@ import matplotlib.table as table
 from scipy.stats import spearmanr
 
 from ..common import *
-from ..strat import StratConstitution
+from ..strat import StratConstitution, Aggregations
 from ..reader import ReaderCSV, load_h5_eras
 from ..utils import get_eras
 from ..data_analysis import compute_corr, neutralize, rank_pred
@@ -94,19 +94,13 @@ def ft_exp(df, rank_name):
     return np.sqrt(np.mean(np.square(indiv_ft_exp(df, rank_name))))
 
 
-def ft_exp_analysis(data_ft_rank, valid_eras, rank_col_name, pic_fp):
+def ft_exp_analysis(data_ft_rank, valid_eras, rank_col_name, pic_fp=None):
 
     target_data = data_ft_rank[['era', TARGET_LABEL]]
 
     ind_ft_exp = np.abs(indiv_ft_exp(data_ft_rank, rank_col_name))
     ft_e = ft_exp(data_ft_rank, rank_col_name)
     max_ft_e = max_ft_exp(data_ft_rank, rank_col_name)
-
-    print("ft_e: ", ft_e)
-    print("max_ft_e: ", max_ft_e)
-
-    print("target_data: ", target_data)
-    print("data_ft_rank: ", data_ft_rank)
 
     cl_era_corr = [
         compute_corr(
@@ -126,13 +120,16 @@ def ft_exp_analysis(data_ft_rank, valid_eras, rank_col_name, pic_fp):
     valid_sd = np.std(cl_era_corr)
     sharp = mean_corr / valid_sd
 
-    print("full_corr: ", full_corr)
-    print("mean_corr: ", mean_corr)
-    print("valid_sd: ", valid_sd)
-    print("sharp: ", sharp)
-    print("max_drawdown: ", max_drawdown)
-    plot_diag(valid_eras, ind_ft_exp, ft_e, max_ft_e, cl_era_corr,
-              max_drawdown, mean_corr, valid_sd, sharp, full_corr, pic_fp)
+    if pic_fp is not None:
+        print("ft_e: ", ft_e)
+        print("max_ft_e: ", max_ft_e)
+        print("full_corr: ", full_corr)
+        print("mean_corr: ", mean_corr)
+        print("valid_sd: ", valid_sd)
+        print("sharp: ", sharp)
+        print("max_drawdown: ", max_drawdown)
+        plot_diag(valid_eras, ind_ft_exp, ft_e, max_ft_e, cl_era_corr,
+                  max_drawdown, mean_corr, valid_sd, sharp, full_corr, pic_fp)
 
     diag_dict = {
         'full_corr': full_corr,
@@ -189,25 +186,41 @@ def cl_pred_diagnostics(strat_dir, cluster):
     return
 
 
-def pred_diagnostics(strat_dir):
+def pred_diagnostics(strat_dir, aggr_id, use_ft_n=None):
+
+    # TODO : aggr needs model used
+    model_types = [
+        ModelType.XGBoost, ModelType.RandomForest, ModelType.NeuralNetwork
+    ]
+
+    pred_name = AGGR_PREFIX + aggr_id
 
     strat_c_fp = strat_dir + '/' + STRAT_CONSTITUTION_FILENAME
     strat_c = StratConstitution(strat_c_fp)
     strat_c.load()
 
     valid_eras = get_eras(VALID_TYPE)
-
     valid_data = load_valid_cl_ft_target(valid_eras)
-
-    pred_name = AGGR_PREFIX + '13'
 
     pred_fp = strat_dir + '/' + PREDICTIONS_FILENAME + VALID_TYPE + '_fst.csv'
 
     cl_m_rank = load_data(pred_fp, cols=['id', pred_name])
 
-    data_ft_rank = pd.concat([valid_data, cl_m_rank], axis=1)
+    fts_n = []
+    if use_ft_n:
+        model_aggr_fp = strat_dir + '/' + MODEL_AGGREGATION_FILENAME
+        full_aggr_dict = Aggregations(model_aggr_fp)
+        full_aggr_dict.load()
 
-    pic_fp = strat_dir + '/' + pred_name
+        aggr_dict = full_aggr_dict.get_models_aggr(model_types)[pred_name]
+        fts_n = aggr_dict['optim_neutr']['sel_ft'].split('|')
+    if len(fts_n) == 0:
+        fts_n = [ft for ft in valid_data.columns if ft.startswith('feature_')]
+    print("fts_n: ", fts_n)
+
+    valid_col = fts_n + ['era', TARGET_LABEL]
+    data_ft_rank = pd.concat([valid_data[valid_col], cl_m_rank], axis=1)
+
     pic_fp = strat_dir + '/' + pred_name + '_ft_exp.png'
     ft_exp_analysis(data_ft_rank, valid_eras, pred_name, pic_fp)
 

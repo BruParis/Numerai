@@ -138,7 +138,7 @@ def aggr_rank(rank_dict, aggr_dict, data_t):
         full_pred_df /= total_w
 
         aggr_pred = rank_pred(full_pred_df)
-        aggr_pred_name = AGGR_PREFIX + str(aggr_id)
+        aggr_pred_name = str(aggr_id)
         aggr_pred.columns = [aggr_pred_name]
         aggr_pred_dict[aggr_id] = aggr_pred
 

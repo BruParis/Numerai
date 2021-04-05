@@ -4,7 +4,7 @@ from .data_analysis import generate_cross_corr, ft_selection, model_ft_imp
 from .strat import make_new_strat, make_aggr_dict
 from .clustering import clustering, simple_era_clustering
 from .format_data import data_setup, split_data_clusters
-from .prediction import make_prediction, cluster_proba, neutralize_pred, upload_results, compute_predict, cl_pred_diagnostics, pred_diagnostics, optimize_aggr
+from .prediction import make_prediction, cluster_proba, neutralize_pred, upload_results, compute_predict, cl_pred_diagnostics, pred_diagnostics, optim_proc
 from .train import generate_cl_interpo, generate_cl_model, generate_fst_layer_model, generate_snd_layer_model
 from .models import generate_model_dict
 from .common import *
@@ -230,20 +230,20 @@ def exec(threadpool, pred, layer, cluster, models, folder):
             if layer == 'snd':
                 print("snd layer doesn't produce proba")
             cluster_proba(folder, model_types)
-    elif pred == 'prediction':
+    elif pred == 'pred':
         make_prediction(folder, layer, model_types)
     elif pred == 'neutralize':
         neutralize_pred(folder, model_types)
 
 
 @cli.command('optim')
+@click.option("-n", "--neutr", default=False, show_default=True, is_flag=True)
 @click.argument('models', default="nn")
-@click.argument('aggr', default="nn")
+@click.argument('aggr', default="1")
 @click.argument('folder', type=click.Path(exists=True))
-def optim(models, aggr, folder):
+def optim(models, aggr, neutr, folder):
     model_types = models_from_arg(models)
-
-    optimize_aggr(folder, model_types, aggr)
+    optim_proc(folder, model_types, aggr, neutr)
 
 
 @cli.command('compute')
@@ -268,9 +268,11 @@ def compute(layer, cluster, models, folder):
               type=click.Choice(LAYERS, case_sensitive=False),
               default="fst",
               prompt=True)
+@click.option('-a', "--aggr-id", default=None)
+@click.option('-f', "--ft-n", default=False, show_default=True, is_flag=True)
 @click.option("-c", "--cluster", default=None, show_default=True)
 @click.argument('folder', type=click.Path(exists=True))
-def diag(layer, cluster, folder):
+def diag(layer, aggr_id, ft_n, cluster, folder):
     if layer == '0':
         if cluster is None:
             print("cluster name not provided")
@@ -279,10 +281,12 @@ def diag(layer, cluster, folder):
     else:
         if cluster is not None:
             print("specifying a cluster is unecessary for layer diagnostic")
+        if aggr_id is None:
+            print("No aggr pred id for layer diagnostic")
         if layer == 'snd':
             print("snd layer doesn't produce proba")
             return
-        pred_diagnostics(folder)
+        pred_diagnostics(folder, aggr_id, ft_n)
 
 
 @cli.command('upload')

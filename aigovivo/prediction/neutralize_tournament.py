@@ -48,13 +48,23 @@ def neutralize_pred(strat_dir, model_types):
             n_pred_name = aggr_pred_name + '_n'
             aggr_pred = data_type_pred[['era', aggr_pred_name]]
 
+            fts_n = []
+            if 'sel_ft' in aggr_desc.keys():
+                fts_n = aggr_dict['optim_neutr']['sel_ft'].split('|')
+
             aggr_n_full = pd.DataFrame()
             for era in data_type_eras:
 
                 era_input_data = load_h5_eras(TOURNAMENT_STORE_H5_FP, [era])
                 era_aggr_pred = aggr_pred.loc[aggr_pred.era == era]
 
-                era_data = pd.concat([era_input_data, era_aggr_pred], axis=1)
+                if len(fts_n) > 0:
+                    valid_col = fts_n + ['era', TARGET_LABEL]
+                    era_data = pd.concat(
+                        [era_input_data[valid_col], era_aggr_pred], axis=1)
+                else:
+                    era_data = pd.concat([era_input_data, era_aggr_pred],
+                                         axis=1)
 
                 aggr_n_full = aggr_n_full.append(era_data[[n_pred_name]])
 
