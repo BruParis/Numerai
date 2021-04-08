@@ -82,7 +82,70 @@ def build_eval_model(train_input,
     return model, train_eval, valid_eval
 
 
-def cl_model_random_search():
+def cl_model_random_search(cl_dirpath,
+                           cl_dict,
+                           model_types,
+                           bSaveModel=False,
+                           bDebug=False):
+
+    cl_eras = cl_dict['eras_name']
+
+    # TODO : case when training on all features ?
+    #     cl_fts = cl_dict['selected_features'].split('|')
+
+    cl_fts = cl_dict['selected_features'].split('|')
+    cl_cols = ['era'] + cl_fts + ['target']
+    train_eras = get_eras('training')
+    full_t_data = load_data(TRAINING_STORE_H5_FP, train_eras, cols=cl_cols)
+
+    valid_eras = get_eras('validation')
+    valid_data = load_data(TOURNAMENT_STORE_H5_FP, valid_eras, cols=cl_cols)
+
+    # Need to reorder ft col by selected_features in cluster description
+    full_t_data = full_t_data[cl_cols]
+    train_data = full_t_data.loc[full_t_data['era'].isin(cl_eras)]
+
+    model_gen = ModelGenerator(cl_dirpath)
+    train_input, train_target = model_gen.format_train_data(train_data)
+
+    cl_m = cl_dict['models']
+
+    for eModel in model_types:
+        model_desc_fp = cl_m[eModel.name]
+        model_desc = ModelDescription('fst', model_desc_fp, eModel)
+        model_desc.load()
+
+        model_gen.start_model_type(eModel, None)
+
+        m_params = model_desc.train_params
+
+        print("model_params: ", m_params)
+
+        m_params['num_eras'] = len(cl_eras)  # keep num eras info for model
+
+        model_gen.generate_model(m_params, bDebug)
+
+        model, t_eval, v_eval = build_eval_model(train_input,
+                                                 train_target,
+                                                 full_t_data,
+                                                 valid_data,
+                                                 model_gen,
+                                                 cl_cols,
+                                                 True,
+                                                 imp_fts=None)
+
+        if bSaveModel:
+            m_fp, config_fp = model.save_model()
+
+            model_desc.train_eval = t_eval
+            model_desc.valid_eval = v_eval
+
+            model_desc.model_fp = m_fp
+            model_desc.config_fp = config_fp
+            model_desc.train_params = m_params
+            model_desc.rs_params = model.model_params
+            model_desc.save()
+
     return
 
 
@@ -351,6 +414,7 @@ def generate_cl_model(dirname, cl, models, r_s, bFtImp, bDebug, bMetrics,
         cl_model_metrics_build(cl_dirpath, cl_dict, models, bDebug=bDebug)
         return
     elif r_s:
+        cl_model_random_search(cl_dirpath, cl_dict, models, bSaveModel, bDebug)
         return
     else:
         cl_model_standard_build(cl_dirpath, cl_dict, models, bSaveModel,
@@ -391,6 +455,8 @@ def generate_fst_layer_model(dirname, models, r_s, bFtImp, bDebug, bMetrics,
         elif bMetrics:
             cl_model_metrics_build(cl_dirpath, cl_dict, models, bDebug=bDebug)
         elif r_s:
+            cl_model_random_search(cl_dirpath, cl_dict, models, bSaveModel,
+                                   bDebug)
             return
         else:
             cl_model_standard_build(cl_dirpath, cl_dict, models, bSaveModel,
