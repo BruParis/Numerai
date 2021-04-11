@@ -2,6 +2,7 @@ import pickle
 import json
 import pandas as pd
 import sklearn.metrics as sm
+import joblib
 
 from abc import ABC, abstractmethod
 from ..common import *
@@ -79,12 +80,14 @@ class Model(ABC):
         return config
 
     def save_model(self):
-        pickle.dump(self.model, open(self.filepath, 'wb'))
+        #pickle.dump(self.model, open(self.filepath, 'wb'))
+        joblib.dump(self.model, self.filepath, compress=True)
         with open(self.config_filepath, 'w') as fp:
             json.dump(self.model_config(), fp, indent=4)
 
         return self.filepath, self.config_filepath
 
     def load_model(self):
-        self.model = pickle.load(open(self.filepath, 'rb'))
+        # self.model = pickle.load(open(self.filepath, 'rb'))
+        self.model = joblib.load(self.filepath)
         self._load_model_config()

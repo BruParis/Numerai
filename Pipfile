@@ -26,6 +26,7 @@ click = "*"
 setuptools = "*"
 aigovivo = {editable = true, path = "."}
 imblearn = "*"
+joblib = "*"
 
 [requires]
 python_version = "3.8"

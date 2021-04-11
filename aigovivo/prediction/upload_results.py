@@ -78,6 +78,7 @@ def upload_results(strat_dir, pred_l, aggr):
     napi = numerapi.NumerAPI(public_id, secret_key)
 
     # upload predictions
-    submission_id = napi.upload_predictions(prediction_fp)
+    model_id = napi.get_models()['aigovivo2']
+    submission_id = napi.upload_predictions(prediction_fp, model_id=model_id)
     # check submission status
     napi.submission_status()
