@@ -296,6 +296,6 @@ def diag(layer, aggr_id, ft_n, cluster, folder):
               default="fst",
               prompt=True)
 @click.argument('folder', type=click.Path(exists=True))
-@click.argument('aggr', type=click.Path(exists=True))
+@click.argument('aggr')
 def upload(layer, folder, aggr):
     upload_results(folder, layer, aggr)

@@ -77,7 +77,7 @@ LAYER_PRED_SUFFIX = {FST_LAYER: '_fst.csv', SND_LAYER: '_snd.csv'}
 
 SND_LAYER_FILENAME = 'snd_layer_training_data.csv'
 
-COMPUTE_PREDCIT_PREFIX = 'compute_pred_'
+COMPUTE_PREDICT_PREFIX = 'compute_pred_'
 TOURNAMENT_DATA_FP = DATA_DIRNAME + '/numerai_tournament_data.csv'
 TOURNAMENT_STORE_H5_FP = DATA_DIRNAME + '/tournament_store.h5'
 PREDICTIONS_FILENAME = 'predictions_tournament_'

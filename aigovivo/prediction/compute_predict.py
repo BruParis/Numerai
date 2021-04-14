@@ -49,8 +49,8 @@ def list_chunks(lst):
         yield lst[i:i + ERA_BATCH_SIZE]
 
 
-def predict_era(folder, strat_c, era, compute_aggr_id, neutr_label, aggr_dict,
-                input_data, cl_models):
+def predict_era_b(folder, strat_c, compute_aggr_id, aggr_dict, input_data,
+                  cl_models):
 
     era_ranks_d = dict()
     # make rank from proba
@@ -71,20 +71,28 @@ def predict_era(folder, strat_c, era, compute_aggr_id, neutr_label, aggr_dict,
         unit_rank = rank_proba_models(unit_proba, [eModel])
         era_ranks_d[cl][model_n]['rank'] = unit_rank
 
-    era_full_pred_df = pd.DataFrame(columns=['Full'])
+    full_pred_df = pd.DataFrame(columns=['Full'])
     for cl, model_n, weight in cl_models:
         cl_m_rank = era_ranks_d[cl][model_n]['rank']
-        if era_full_pred_df.size == 0:
-            era_full_pred_df['Full'] = cl_m_rank[model_n] * weight
+        if full_pred_df.size == 0:
+            full_pred_df['Full'] = cl_m_rank[model_n] * weight
         else:
-            era_full_pred_df['Full'] += cl_m_rank[model_n] * weight
+            full_pred_df['Full'] += cl_m_rank[model_n] * weight
 
     total_w = aggr_dict['total_w']
-    era_full_pred_df /= total_w
+    full_pred_df /= total_w
 
-    era_full_pred_df = rank_pred(era_full_pred_df)
-    era_full_pred_df.columns = [compute_aggr_id]
+    full_pred_df = rank_pred(full_pred_df)
+    full_pred_df.columns = [compute_aggr_id]
 
+    full_pred_df = pd.concat([input_data[['era', TARGET_LABEL]], full_pred_df],
+                             axis=1)
+
+    return full_pred_df
+
+
+def neutr_pred(aggr_dict, era_b, compute_aggr_id, pred_df, neutr_label,
+               input_data):
     neutr_valid_col = [
         ft for ft in input_data.columns if ft.startswith('feature')
     ]
@@ -92,14 +100,18 @@ def predict_era(folder, strat_c, era, compute_aggr_id, neutr_label, aggr_dict,
         neutr_valid_col = aggr_dict['optim_neutr']['sel_ft'].split('|')
     neutr_valid_col += ['era', TARGET_LABEL]
 
-    era_full_pred_df[neutr_label] = neutralize(
-        pd.concat([input_data[neutr_valid_col], era_full_pred_df], axis=1),
-        compute_aggr_id)
+    neutr_df = pd.DataFrame()
+    for era in era_b:
+        era_input_data = input_data.loc[input_data.era == era]
+        era_pred_df = pred_df.loc[era_input_data.index]
 
-    era_full_pred_df = pd.concat(
-        [input_data[['era', TARGET_LABEL]], era_full_pred_df], axis=1)
+        era_neutr = neutralize(
+            pd.concat([era_input_data[neutr_valid_col], era_pred_df], axis=1),
+            compute_aggr_id)
+        neutr_df = pd.concat([neutr_df, era_neutr], axis=1)
+    pred_df[neutr_label] = neutr_df
 
-    return era_full_pred_df
+    return pred_df
 
 
 def compute_predict(layer, cluster, folder, model_types):
@@ -131,11 +143,11 @@ def compute_predict(layer, cluster, folder, model_types):
     cl_models = aggr_dict['cluster_models']
 
     for data_type in PREDICTION_TYPES:
+        start_time_d = time.time()
 
         print('data_type: ', data_type)
 
         eras_l = get_eras(data_type)
-        print('eras_l: ', eras_l)
 
         eras_batches = list_chunks(
             eras_l) if data_type is not VALID_TYPE else [eras_l]
@@ -144,20 +156,25 @@ def compute_predict(layer, cluster, folder, model_types):
 
         start_time = time.time()
         for era_b in eras_batches:
+            print("era batches: ", era_b)
 
+            start_time_l = time.time()
             input_data = load_input_data(era_b)
+            print("     -> era batch loaded in %s seconds" %
+                  (time.time() - start_time_l))
 
-            for era in era_b:
-                print('era: ', era)
-                era_input_data = input_data.loc[input_data.era == era]
+            start_time_p = time.time()
+            era_rank_target = predict_era_b(folder, strat_c, compute_aggr_id,
+                                            aggr_dict, input_data, cl_models)
+            print("     -> era batch pred in %s seconds" %
+                  (time.time() - start_time_p))
 
-                era_rank_target = predict_era(folder, strat_c, era,
-                                              compute_aggr_id, neutr_label,
-                                              aggr_dict, era_input_data,
-                                              cl_models)
+            if strat_c.neutralize:
+                neutr_pred(aggr_dict, era_b, compute_aggr_id, era_rank_target,
+                           neutr_label, input_data)
 
-                data_full_pred = pd.concat([data_full_pred, era_rank_target],
-                                           axis=0)
+            data_full_pred = pd.concat([data_full_pred, era_rank_target],
+                                       axis=0)
 
         print("data_full_pred: ", data_full_pred)
 
@@ -185,9 +202,12 @@ def compute_predict(layer, cluster, folder, model_types):
             with open(comp_diag_fp, 'w') as fp:
                 json.dump(comp_diag_dict, fp, indent=4)
 
-        data_type_pred_fp = folder + '/' + COMPUTE_PREDCIT_PREFIX + data_type + ".csv"
+        data_type_pred_fp = folder + '/' + COMPUTE_PREDICT_PREFIX + data_type + ".csv"
 
         with open(data_type_pred_fp, 'w') as fp:
             data_full_pred.to_csv(fp)
+
+        print(" -> data type pred in %s seconds" %
+              (time.time() - start_time_d))
 
     return

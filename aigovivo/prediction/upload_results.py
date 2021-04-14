@@ -24,6 +24,8 @@ def load_data(data_filepath, data_col=None):
 
 def load_predict_file(pred_fp, aggr):
     predict_data = load_data(pred_fp)
+    print("predict_data: ", predict_data)
+
     predict_series = predict_data[aggr]
     predict_df = pd.DataFrame({
         'id': predict_series.index,
@@ -50,17 +52,18 @@ def upload_results(strat_dir, pred_l, aggr):
     orig_data_id_era_dt = load_orig_id_era_dt()
 
     pred_validation_fp = strat_dir + \
-        '/' + PREDICTIONS_FILENAME + VALID_TYPE + '_' + pred_l_suffix + '.csv'
-    pred_test_fp = strat_dir + '/' + PREDICTIONS_FILENAME + TEST_TYPE + '_' + pred_l_suffix + '.csv'
-    pred_live_fp = strat_dir + '/' + PREDICTIONS_FILENAME + LIVE_TYPE + '_' + pred_l_suffix + '.csv'
+        '/' + COMPUTE_PREDICT_PREFIX + VALID_TYPE + '.csv'
+    pred_test_fp = strat_dir + '/' + COMPUTE_PREDICT_PREFIX + TEST_TYPE + '.csv'
+    pred_live_fp = strat_dir + '/' + COMPUTE_PREDICT_PREFIX + LIVE_TYPE + '.csv'
 
     valid_data = load_predict_file(pred_validation_fp, aggr)
     test_data = load_predict_file(pred_test_fp, aggr)
     live_data = load_predict_file(pred_live_fp, aggr)
 
     pred_data = pd.concat([valid_data, test_data, live_data], axis=0)
-
     pred_data = pred_data.reindex(orig_data_id_era_dt.index)
+    print(" -> pred_data: ", pred_data)
+    pred_data = pred_data.rank(pct=True)
 
     prediction_fp = strat_dir + '/' + NUMERAI_PRED_FILENAME
 
@@ -79,6 +82,7 @@ def upload_results(strat_dir, pred_l, aggr):
 
     # upload predictions
     model_id = napi.get_models()['aigovivo2']
+    print("model_id: ", model_id)
     submission_id = napi.upload_predictions(prediction_fp, model_id=model_id)
     # check submission status
-    napi.submission_status()
+    napi.submission_status(model_id=model_id)
