@@ -1,6 +1,8 @@
 import json
 
 from ..common import ModelType, STRAT_CONSTITUTION_FILENAME
+
+# remove if compute
 from ..models import model_params, get_desc_filename
 from ..strat import StratConstitution
 
@@ -81,7 +83,7 @@ class ModelDescription():
         self._extract_from_dict(loaded_dict)
         return
 
-
+# remove for compute + remove model + strat import
 def generate_model_dict(folder, layer):
     strat_c_fp = folder + '/' + STRAT_CONSTITUTION_FILENAME
     strat_c = StratConstitution(strat_c_fp)

@@ -24,13 +24,11 @@ def extract_era_data_type():
     eras_dict = dict()
 
     # First training
-    eras_dict[TRAINING_TYPE] = load_eras(TRAINING_DATA_FP)
+    if not COMPUTE_BOOL:
+        eras_dict[TRAINING_TYPE] = load_eras(TRAINING_DATA_FP)
 
     # Then tournament training
     for data_t in PREDICTION_TYPES:
-
-        if COMPUTE_BOOL and data_t == "training":
-            continue
 
         data_type_eras = load_eras(TOURNAMENT_DATA_FP, data_t)
         eras_dict[data_t] = data_type_eras

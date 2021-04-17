@@ -108,7 +108,8 @@ def neutr_pred(aggr_dict, era_b, compute_aggr_id, pred_df, neutr_label,
         era_neutr = neutralize(
             pd.concat([era_input_data[neutr_valid_col], era_pred_df], axis=1),
             compute_aggr_id)
-        neutr_df = pd.concat([neutr_df, era_neutr], axis=1)
+        neutr_df = pd.concat([neutr_df, era_neutr], axis=0)
+
     pred_df[neutr_label] = neutr_df
 
     return pred_df
